@@ -54,19 +54,6 @@ int main(void) {
    init_bullets();
    init_enemies();
 
-   //select player bullets (temp)
-   
-   selectbullet(0); // normal
-   selectbullet(0);
-   selectbullet(0);
-   selectbullet(1); // big
-   selectbullet(1);
-   selectbullet(1);
-   selectbullet(1);
-   selectbullet(2); // fast
-   selectbullet(2);
-   selectbullet(2); 
-
    //Avião
     BITMAP *player = load_bitmap("player.bmp", NULL);
 
@@ -113,8 +100,22 @@ int main(void) {
     //Menu
     draw_menu(buffer);
     blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    readkey();
 
+    int cooldown = 0;
+    while (!key[KEY_ENTER]){ //bullet selection
+        draw_bullet_mag(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
+        
+        if(key[KEY_0] && cooldown <= 0){selectbullet(0); cooldown = 30;}
+        if(key[KEY_1] && cooldown <= 0){selectbullet(1); cooldown = 30;}
+        if(key[KEY_2] && cooldown <= 0){selectbullet(2); cooldown = 30;}
+
+        cooldown--;
+
+        blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+        rest(16);
+
+    } 
     TreeNode* game_map = generate_map(4);
     print_tree(game_map, 0);
     TreeNode* map_root = generate_map(4);
@@ -138,7 +139,7 @@ int main(void) {
 
    
 
-   while (1) {
+    while (1) {
        if (game_over) {
            textout_ex(screen, font, "Game Over! Press ESC to exit.", SCREEN_WIDTH / 4, SCREEN_HEIGHT / 2, makecol(255, 0, 0), -1);
            if (key[KEY_ESC]) {
@@ -182,6 +183,8 @@ int main(void) {
        //Desenhando balas
        draw_bullets(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
 
+
+
        //Deseenhando inimigos
        draw_enemies(buffer, enemy);
 
@@ -190,6 +193,8 @@ int main(void) {
        rectfill(buffer, (SCREEN_WIDTH * 3) / 4, 0, SCREEN_WIDTH, SCREEN_HEIGHT, makecol(59, 68, 75));
        show_enemy_counter(buffer);
 
+        //Desenhando a fila
+       draw_bullet_mag(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
 
        blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 

@@ -41,8 +41,15 @@ void draw_menu(BITMAP* buffer) {
     int x_author3 = (screen_width - text_length(font, author3)) / 2;
     textprintf_ex(buffer, font, x_author3, 105, makecol(10, 200, 10), -1, author3);
 
+    // Escolher os tiros
+    const char* select_msg = "Press 0 / 1 / 2 to select bullets";
+    int x_select = (screen_width - text_length(font, select_msg)) / 2;
+    textprintf_ex(buffer, font, x_select, 120, makecol(10, 200, 10), -1, select_msg);
+
     // Mensagem para iniciar 
     const char* start_msg = "Press ENTER to start";
     int x_start = (screen_width - text_length(font, start_msg)) / 2;
     textprintf_ex(buffer, font, x_start, 150, makecol(10, 200, 10), -1, start_msg);
+
+
 }
