@@ -188,20 +188,19 @@ void draw_bullets(BITMAP* buffer, BITMAP* enemy_bullet1, BITMAP* playerBullet1, 
    for (int i = 0; i < MAX_BULLETS; i++) {
        if (bullets[i].active) {
            if (bullets[i].is_enemy_bullet) {
-               circlefill(buffer, bullets[i].x, bullets[i].y, bullets[i].radius, makecol(255, 50, 50));
-               //masked_blit(enemy_bullet, buffer, 0, 0, enemies[i].x, enemies[i].y, enemy->w, enemy->h);
+               circlefill(buffer, bullets[i].x - 5, bullets[i].y + 5, bullets[i].radius, makecol(255, 50, 50)); //Adicionei
            } else {
-               //circlefill(buffer, bullets[i].x, bullets[i].y, BULLET_RADIUS, makecol(254, 242, 85));
                if(bullets[i].radius == 3){
-                    masked_blit(playerBullet1, buffer, 0, 0, bullets[i].x, bullets[i].y, playerBullet1->w, playerBullet1->h);
+                    masked_blit(playerBullet1, buffer, 0, 0, bullets[i].x - playerBullet1->w / 2 - 10, bullets[i].y - playerBullet1->h / 2 - 20, playerBullet1->w, playerBullet1->h); //Adicionei
                }
                if(bullets[i].radius == 5){
-                    masked_blit(playerBullet2, buffer, 0, 0, bullets[i].x, bullets[i].y, playerBullet2->w, playerBullet2->h);
+                    masked_blit(playerBullet2, buffer, 0, 0, bullets[i].x - playerBullet2->w / 2 - 10, bullets[i].y - playerBullet2->h / 2 - 20, playerBullet2->w, playerBullet2->h); //Adicionei
                }
                if(bullets[i].radius == 1){
-                    masked_blit(playerBullet3, buffer, 0, 0, bullets[i].x, bullets[i].y, playerBullet3->w, playerBullet3->h);
+                    masked_blit(playerBullet3, buffer, 0, 0, bullets[i].x - playerBullet3->w / 2 - 10, bullets[i].y - playerBullet3->h / 2 - 20, playerBullet3->w, playerBullet3->h); //Adicionei
                }
            }
        }
    }
 }
+

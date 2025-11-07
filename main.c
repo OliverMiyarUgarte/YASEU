@@ -8,12 +8,13 @@
 #define PLAYER_RADIUS 5
 #define MAX_BULLETS 10
 #define MAX_ENEMIES 5
-#define ENEMY_RADIUS 8
 #define ENEMY_SHOOT_COOLDOWN 90
 
 int player_x = 100, player_y = 100;
+int player_health = 10;
 int game_over = 0;
 int bullet_cooldown = 0;
+int ENEMY_RADIUS;
 
 #include "bullets.h"
 #include "enemies.h"
@@ -21,6 +22,7 @@ int bullet_cooldown = 0;
 #include "menu.h"
 #include "mapCreator.h"
 #include "mapDraw.h"
+#include "heart.h"
 
 int main(void) {
    if (allegro_init() != 0) {
@@ -75,6 +77,15 @@ int main(void) {
 
     if(!enemy){
         allegro_message("Erro ao carregar enemy.bmp!");
+        return 1;
+    }
+    ENEMY_RADIUS = enemy->w / 2;
+
+    //Heart
+    BITMAP *heart = load_bitmap("heart.bmp", NULL);
+
+    if(!heart){
+        allegro_message("Erro ao carregar heart.bmp!");
         return 1;
     }
 
@@ -177,8 +188,7 @@ int main(void) {
 
 
        //Desenehando avião
-       masked_blit(player, buffer, 0, 0, player_x, player_y, player->w, player->h);
-
+       masked_blit(player, buffer, 0, 0, player_x - player->w / 2, player_y - player->h/2, player->w, player->h);
        //Desenhando balas
        draw_bullets(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
 
@@ -191,6 +201,10 @@ int main(void) {
        rectfill(buffer, 0, 0, SCREEN_WIDTH / 4, SCREEN_HEIGHT, makecol(59, 68, 75));
        rectfill(buffer, (SCREEN_WIDTH * 3) / 4, 0, SCREEN_WIDTH, SCREEN_HEIGHT, makecol(59, 68, 75));
        show_enemy_counter(buffer);
+
+        //Desenhando coração
+       draw_heart(buffer, heart);
+
 
         //Desenhando a fila
        draw_bullet_mag(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);

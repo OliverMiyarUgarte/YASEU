@@ -68,7 +68,7 @@ void update_enemies() {
 void draw_enemies(BITMAP* buffer, BITMAP* enemy) {
    for (int i = 0; i < MAX_ENEMIES; i++) {
        if (enemies[i].active) {
-            masked_blit(enemy, buffer, 0, 0, enemies[i].x - 15, enemies[i].y, enemy->w, enemy->h);
+            masked_blit(enemy, buffer, 0, 0, enemies[i].x - enemy->w / 2, enemies[i].y - enemy->h / 2, enemy->w, enemy->h); //Adicionei
            int health_bar_width = ENEMY_RADIUS * 2;
            int health_bar_height = 2;
            int health_bar_color = makecol(0, 255, 0); 
@@ -82,4 +82,3 @@ void draw_enemies(BITMAP* buffer, BITMAP* enemy) {
        }
    }
 }
-
