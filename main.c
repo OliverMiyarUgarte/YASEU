@@ -117,7 +117,6 @@ int main(void) {
 
     } 
     TreeNode* game_map = generate_map(4);
-    print_tree(game_map, 0);
     TreeNode* map_root = generate_map(4);
 
     // Map selection screen
