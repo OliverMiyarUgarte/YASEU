@@ -19,6 +19,8 @@ int bullet_cooldown = 0;
 #include "enemies.h"
 #include "collisions.h"
 #include "menu.h"
+#include "mapCreator.h"
+#include "mapDraw.h"
 
 int main(void) {
    if (allegro_init() != 0) {
@@ -112,6 +114,28 @@ int main(void) {
     draw_menu(buffer);
     blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
     readkey();
+
+    TreeNode* game_map = generate_map(4);
+    print_tree(game_map, 0);
+    TreeNode* map_root = generate_map(4);
+
+    // Map selection screen
+    while (!key[KEY_SPACE]) {
+        clear_to_color(buffer, makecol(20, 20, 30));
+        textout_centre_ex(buffer, font, "Press SPACE to start", SCREEN_W / 2, 10, makecol(255, 255, 255), -1);
+
+        draw_map(buffer, map_root);
+
+        blit(buffer, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_HEIGHT);
+        rest(16);
+
+        if (key[KEY_ESC]) {
+            destroy_tree(map_root);
+            allegro_exit();
+            return 0;
+        }
+    }
+
    
 
    while (1) {
@@ -172,8 +196,15 @@ int main(void) {
 
        rest(16);
    }
-
-
+   
+   destroy_tree(map_root);
+   destroy_tree(game_map);
+   destroy_bitmap(player);
+   destroy_bitmap(fundo);
+   destroy_bitmap(enemy);
+   destroy_bitmap(playerBullet1);
+   destroy_bitmap(playerBullet2);
+   destroy_bitmap(playerBullet3);
    destroy_bitmap(buffer);
    allegro_exit();
    return 0;
