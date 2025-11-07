@@ -4,11 +4,12 @@ typedef struct {
    int x, y;
    int active;
    int is_enemy_bullet;
-   int speedx;
+   int speedx; // n usado
    int speedy;
    int radius;
    int cooldown;
    int damage;
+   int spread;
 } Bullet;
 
 Bullet btypes[3];
@@ -36,18 +37,23 @@ void init_bullets() {
    btypes[0].radius = 3;
    btypes[0].cooldown = 5;
    btypes[0].damage = 1;
+   btypes[0].spread = 1;
 
    btypes[1].speedx = 0; 
    btypes[1].speedy = 2; 
    btypes[1].radius = 5;
    btypes[1].cooldown = 10;
    btypes[1].damage = 2;
+   btypes[1].spread = 0;
+
 
    btypes[2].speedx = 0;
    btypes[2].speedy = 7; 
    btypes[2].radius = 1;
    btypes[2].cooldown = 2; 
    btypes[2].damage = 1;
+   btypes[2].spread = 3;
+
 }
 
 void selectbullet(int i){
@@ -89,7 +95,7 @@ void shoot_bullet(int x, int y, int is_enemy_bullet) {
            if (is_enemy_bullet) {
                 bullets[i].x = x;
                int rand_index = rand() % 3;
-               bullets[i].speedx = btypes[rand_index].speedx;
+               bullets[i].speedx = (bullets[i].spread == 0) ? 0 : (rand() % 2 == 0) ? rand() % bullets[i].spread : -rand() % bullets[i].spread;
                bullets[i].speedy = btypes[rand_index].speedy;
                bullets[i].radius = btypes[rand_index].radius;
                bullets[i].cooldown = btypes[rand_index].cooldown;
@@ -104,7 +110,7 @@ void shoot_bullet(int x, int y, int is_enemy_bullet) {
                    Retira(&pbullets[ativa], &atual, &deucerto);
                    Insere(&pbullets[1 - ativa], atual, &deucerto);
                     bullet_cooldown = btypes[atual].cooldown;
-                    bullets[i].speedx = btypes[atual].speedx;
+                    bullets[i].speedx = (btypes[atual].spread == 0) ? 0 : (rand() % 2 == 0) ? rand() % btypes[atual].spread : -rand() % btypes[atual].spread;
                     bullets[i].speedy = btypes[atual].speedy;
                     bullets[i].radius = btypes[atual].radius;
                     bullets[i].cooldown = btypes[atual].cooldown;
@@ -118,6 +124,32 @@ void shoot_bullet(int x, int y, int is_enemy_bullet) {
            break;
        }
    }
+}
+
+void draw_bullet_mag(BITMAP* buffer, BITMAP* enemy_bullet1, BITMAP* playerBullet1, BITMAP* playerBullet2, BITMAP* playerBullet3) {
+    fila temp;
+    Cria(&temp);
+    int pos = 10;
+    int atual;
+    while (!Vazia(&pbullets[ativa])){
+        Retira(&pbullets[ativa], &atual, &deucerto);
+        Insere(&temp, atual, &deucerto);
+        //circlefill(buffer, SCREEN_WIDTH*(4.0/5), pos, 10 /*radius*/, makecol(255, 50, 50));
+               if(atual == 0){
+                    masked_blit(playerBullet1, buffer, 0, 0, SCREEN_WIDTH*(4.0/5), pos, playerBullet1->w, playerBullet1->h);
+               }
+               if(atual == 1){
+                    masked_blit(playerBullet2, buffer, 0, 0, SCREEN_WIDTH*(4.0/5), pos, playerBullet2->w, playerBullet2->h);
+               }
+               if(atual == 2){
+                    masked_blit(playerBullet3, buffer, 0, 0, SCREEN_WIDTH*(4.0/5), pos, playerBullet3->w, playerBullet3->h);
+               }
+        pos += 10;
+    }
+    while (!Vazia(&temp)){
+        Retira(&temp, &atual, &deucerto);
+        Insere(&pbullets[ativa], atual, &deucerto);
+    }
 }
 
 
@@ -151,7 +183,6 @@ void update_bullets() {
        }
    }
 }
-
 
 void draw_bullets(BITMAP* buffer, BITMAP* enemy_bullet1, BITMAP* playerBullet1, BITMAP* playerBullet2, BITMAP* playerBullet3) {
    for (int i = 0; i < MAX_BULLETS; i++) {

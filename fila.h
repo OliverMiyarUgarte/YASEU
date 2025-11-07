@@ -63,3 +63,4 @@ void Retira(fila *f, int *x, int *deucerto) {
         free(aux);
     }
 }
+
