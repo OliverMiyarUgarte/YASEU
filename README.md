@@ -9,7 +9,7 @@ Desenvolvido em **C** e executado via **DOSBox**
 
 **YASEU** (*Yet Another Shoot'Em Up*) é um jogo no estilo **space shooter**, criado como projeto acadêmico para aplicar conceitos fundamentais de **Algoritmos e Estruturas de Dados**, organização modular de código e desenvolvimento de jogos em C.
 
-O jogo foi projetado para rodar em ambiente **MS-DOS**, utilizando **DOSBox** e a biblioteca **Allegro** compatível com DOS.
+O jogo foi projetado para rodar em ambiente **MS-DOS**, utilizando **DOSBox** e a biblioteca **Allegro 4.2.2** compatível com DOS.
 
 ---
 
