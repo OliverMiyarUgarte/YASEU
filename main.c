@@ -13,7 +13,7 @@
 int player_x = 100, player_y = 100;
 int player_health = 10;
 int game_over = 0;
-int bullet_cooldown = 0;
+int bullet_cooldown = 1;
 int ENEMY_RADIUS;
 
 #include "bullets.h"
@@ -113,12 +113,18 @@ int main(void) {
     blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     int cooldown = 0;
+    int BulletCooldownReduction = 0;
+
     while (!key[KEY_ENTER]){ //bullet selection
+        clear_to_color(buffer, makecol(0, 0, 0));
+        draw_menu(buffer);
+
         draw_bullet_mag(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
+        draw_double(buffer, SCREEN_WIDTH*(4.5/5), 10, (Nelementos(&pbullets[0])-BulletCooldownReduction/60.0));
         
-        if(key[KEY_0] && cooldown <= 0){selectbullet(0); cooldown = 30;}
-        if(key[KEY_1] && cooldown <= 0){selectbullet(1); cooldown = 30;}
-        if(key[KEY_2] && cooldown <= 0){selectbullet(2); cooldown = 30;}
+        if(key[KEY_0] && cooldown <= 0){selectbullet(0); cooldown = 10;}
+        if(key[KEY_1] && cooldown <= 0){selectbullet(1); cooldown = 10; BulletCooldownReduction -= 5;}
+        if(key[KEY_2] && cooldown <= 0){selectbullet(2); cooldown = 10; BulletCooldownReduction += 5;}
 
         cooldown--;
 
@@ -208,6 +214,7 @@ int main(void) {
 
         //Desenhando a fila
        draw_bullet_mag(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
+       draw_double(buffer, SCREEN_WIDTH*(4.5/5), 10, (bullet_cooldown/60.0));
 
        blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 

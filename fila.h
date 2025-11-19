@@ -64,3 +64,14 @@ void Retira(fila *f, int *x, int *deucerto) {
     }
 }
 
+int Nelementos(fila *f) {
+    int count = 0;
+    Node *aux = f->primeiro;
+
+    while (aux != NULL) {
+        count++;
+        aux = aux->next;
+    }
+
+    return count;
+}

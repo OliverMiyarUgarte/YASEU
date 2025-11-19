@@ -18,8 +18,9 @@ fila pbullets[2];
 
 int atual = 0;
 int ativa = 0;
-int reload_time = 60;
 int deucerto;
+
+int BulletCooldownReduction = 0;
 
 void init_bullets() {
    for (int i = 0; i < MAX_BULLETS; i++) {
@@ -99,7 +100,7 @@ void shoot_bullet(int x, int y, int is_enemy_bullet) {
                bullets[i].speedy = btypes[rand_index].speedy;
                bullets[i].radius = btypes[rand_index].radius;
                bullets[i].cooldown = btypes[rand_index].cooldown;
-               bullets[i].damage = btypes[atual].damage;
+               bullets[i].damage = btypes[rand_index].damage;
            } else { // player bullet
                if (Vazia(&pbullets[0]) && Vazia(&pbullets[1])) { // no bullet selected
                     bullets[i].active = 0;
@@ -117,7 +118,7 @@ void shoot_bullet(int x, int y, int is_enemy_bullet) {
                     bullets[i].damage = btypes[atual].damage;
                } else {
                    ativa = 1 - ativa; 
-                   bullet_cooldown = reload_time;
+                   bullet_cooldown = Nelementos(&pbullets[ativa])*10 - BulletCooldownReduction;
                    bullets[i].active = 0;
                }
            }
@@ -125,6 +126,26 @@ void shoot_bullet(int x, int y, int is_enemy_bullet) {
        }
    }
 }
+
+void draw_current_cooldown(BITMAP* buffer){
+    char str_buffer[10];
+    snprintf(str_buffer,sizeof(str_buffer), "%.1f", bullet_cooldown);
+    textprintf_ex(buffer, font, SCREEN_WIDTH*(4.5/5), 10, makecol(10, 200, 10), -1, "%.1f" ,  str_buffer);
+}
+
+void draw_bullet_cooldown(BITMAP* buffer, fila* f){
+    double cd = (Nelementos(f)*10 - BulletCooldownReduction)/60;
+    char str_buffer[10];
+    (str_buffer,sizeof(str_buffer), "%.1f", cd);
+
+    textprintf_ex(buffer, font, SCREEN_WIDTH*(4.5/5), 10, makecol(10, 200, 10), -1, "%.1f" , bullet_cooldown/60.0);
+}
+
+void draw_double(BITMAP *buffer, int x, int y, double value){
+    textprintf_ex(buffer, font, x, y, makecol(10, 200, 10), -1, "%.1f", value);
+}
+
+
 
 void draw_bullet_mag(BITMAP* buffer, BITMAP* enemy_bullet1, BITMAP* playerBullet1, BITMAP* playerBullet2, BITMAP* playerBullet3) {
     fila temp;
