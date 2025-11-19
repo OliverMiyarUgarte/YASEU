@@ -1,50 +1,69 @@
-# 🎮 YASEU — Yet Another Shoot'Em Up
-Projeto da disciplina **Algoritmos e Estruturas de Dados** ministrada pelo **Professor Roberto Ferrari** (2025/2)
+# YASEU — Yet Another Shoot'Em Up
+Projeto da disciplina **Algoritmos e Estruturas de Dados**  
 Desenvolvido em **C** e executado via **DOSBox**
 
 ---
 
-## ✨ Sobre o jogo
+## Sobre o jogo
 
-**YASEU** (*Yet Another Shoot'Em Up*) é um jogo no estilo **shoot'em up**, criado como parte de um projeto acadêmico para colocar em prática diferentes conceitos de **estruturas de dados**
+**YASEU** (*Yet Another Shoot'Em Up*) é um jogo no estilo **space shooter**, criado como projeto acadêmico para aplicar conceitos fundamentais de **Algoritmos e Estruturas de Dados**, organização modular de código e desenvolvimento de jogos em C.
 
-O jogo foi desenvolvido para rodar em **MS-DOS**, utilizando **DOSBox** e a biblioteca **Allegro 4.2.2** compatível com DOS.
+O jogo foi projetado para rodar em ambiente **MS-DOS**, utilizando **DOSBox** e a biblioteca **Allegro** compatível com DOS.
 
 ---
 
-## 🚀 Gameplay
+## Gameplay
 
-Você controla uma nave espacial e precisa sobreviver enquanto enfrenta ondas de inimigos.  
+Você controla uma nave espacial e enfrenta ondas de inimigos enquanto tenta sobreviver o máximo possível.
+
 O jogo inclui:
 
-- Movimentação suave da nave do jogador  
-- Tiros do jogador e dos inimigos  
-- Sistema de colisões  
-- Inimigos com cooldown de ataque  
-- Sistema de vidas
-- Invencibilidade temporária com piscamento do sprite  
-- Limite de entidades simultâneas (balas/inimigos)  
-- HUD simples com informações da partida  
+- Movimentação da nave do jogador
+- Sistema de tiros (três tipos de balas)
+- Animações simples com sprites
+- Colisões entre balas e entidades
+- Inimigos com comportamento próprio
+- Sistema de vidas (corações)
+- Mapas desenhados dinamicamente
+- Utilização de estruturas como **fila** e **árvore**
+- HUD básico com informações da partida
 
 ---
 
-## 🧠 Conceitos de Algoritmos e Estruturas de Dados Utilizados
+## Controles
 
-O desenvolvimento fez uso de diversos tópicos estudados em aula, incluindo:
+```text
+←  →  ↑  ↓   Movimentação
+Espaço        Atirar
+Esc           Sair do jogo
+```
+---
 
-- Vetores como estruturas de armazenamento fixas para balas e inimigos  
-- Flags de estado (`active`, `is_enemy_bullet`, etc.)  
-- Estruturas fila (`fila.h`) para a organização das ordens das balas e árvore (`tree.h`) para o mapeamento das fases
-- Lógica de simulação quadro-a-quadro  
-- Controle de tempo e estados  
-- Modularização com múltiplos arquivos `.c` e `.h`  
-- Colisões usando distância euclidiana  
-- Gerenciamento de ponteiros e memória  
-- Organização e abstração de subsistemas (player, inimigos, balas)  
+## Conceitos de Algoritmos e Estruturas de Dados Utilizados
+
+Este projeto aplica diversos tópicos vistos na disciplina:
+
+### **Estruturas de Dados**
+- Vetores estáticos para entidades (balas, inimigos)
+- **Fila** implementada manualmente (`fila.h`)
+- **Árvore** binária para organização de dados (`tree.h`)
+- Structs para modularizar entidades do jogo
+
+### **Algoritmos**
+- Lógica de colisão (distância e bounding box)
+- Algoritmos para criação e desenho do mapa (`mapCreator.h`, `mapDraw.h`)
+- Sistema de menu e fluxo do jogo
+- Controle de tempo e estados com variáveis de cooldown
+
+### **Engenharia de Software**
+- Modularização em múltiplos headers
+- Organização em camadas (gráficos, lógica, estruturas)
+- Separação de assets e código-fonte
 
 ---
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
+
 ```text
 /
 ├── src/
@@ -67,3 +86,11 @@ O desenvolvimento fez uso de diversos tópicos estudados em aula, incluindo:
 │       ├── heart.bmp
 │       └── player.bmp
 └── README.md
+```
+---
+
+## Equipe
+- Guilherme Aoki
+- Lucas Okamoto Yoshimura
+- Oliver Miyar Ugarte
+- Nicolas Efraim Torres Albino
