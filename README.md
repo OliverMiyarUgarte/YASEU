@@ -45,6 +45,7 @@ O desenvolvimento fez uso de diversos tópicos estudados em aula, incluindo:
 ---
 
 ## 📁 Estrutura do Projeto
+```text
 /
 ├── src/
 │   ├── main.c
