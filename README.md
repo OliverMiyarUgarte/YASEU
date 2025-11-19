@@ -33,7 +33,7 @@ O jogo inclui:
 ## Controles
 
 ```text
-←  →  ↑  ↓   Movimentação
+a d s w   Movimentação
 Espaço        Atirar
 Esc           Sair do jogo
 ```
@@ -54,11 +54,6 @@ Este projeto aplica diversos tópicos vistos na disciplina:
 - Algoritmos para criação e desenho do mapa (`mapCreator.h`, `mapDraw.h`)
 - Sistema de menu e fluxo do jogo
 - Controle de tempo e estados com variáveis de cooldown
-
-### **Engenharia de Software**
-- Modularização em múltiplos headers
-- Organização em camadas (gráficos, lógica, estruturas)
-- Separação de assets e código-fonte
 
 ---
 
