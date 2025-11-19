@@ -1,5 +1,6 @@
 # YASEU — Yet Another Shoot'Em Up
 Projeto da disciplina **Algoritmos e Estruturas de Dados** ministrada pelo Prof. (Dr.) **Roberto Ferrari Junior** (2025/2)
+
 Desenvolvido em **C** e executado via **DOSBox**
 
 ---
