@@ -34,7 +34,7 @@ O desenvolvimento fez uso de diversos tópicos estudados em aula, incluindo:
 
 - Vetores como estruturas de armazenamento fixas para balas e inimigos  
 - Flags de estado (`active`, `is_enemy_bullet`, etc.)  
-- Estruturas (`filas`) para a organização das ordens das balas e (`árvores`) para o mapeamento das fases
+- Estruturas fila (`fila.h`) para a organização das ordens das balas e árvore (`tree.h`) para o mapeamento das fases
 - Lógica de simulação quadro-a-quadro  
 - Controle de tempo e estados  
 - Modularização com múltiplos arquivos `.c` e `.h`  
@@ -45,19 +45,24 @@ O desenvolvimento fez uso de diversos tópicos estudados em aula, incluindo:
 ---
 
 ## 📁 Estrutura do Projeto
-
-```text
 /
 ├── src/
 │   ├── main.c
-│   ├── player.c / player.h
-│   ├── enemy.c / enemy.h
-│   ├── bullets.c / bullets.h
-│   ├── utils.c / utils.h
+│   ├── menu.h
+│   ├── bullets.h
+│   ├── collisions.h
+│   ├── enemies.h
+│   ├── heart.h
+│   ├── mapCreator.h
+│   ├── mapDraw.h
+│   ├── fila.h
+│   ├── tree.h
 │   └── graphics/
-│       ├── sprites.bmp
-│       └── ...
-├── docs/
-│   └── relatorio.pdf
-├── Makefile
+│       ├── bullet1.bmp
+│       ├── bullet2.bmp
+│       ├── bullet3.bmp
+│       ├── enemy.bmp
+│       ├── fundo.bmp
+│       ├── heart.bmp
+│       └── player.bmp
 └── README.md
