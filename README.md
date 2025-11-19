@@ -58,33 +58,6 @@ Este projeto aplica diversos tópicos vistos na disciplina:
 
 ---
 
-## Estrutura do Projeto
-
-```text
-/
-├── src/
-│   ├── main.c
-│   ├── menu.h
-│   ├── bullets.h
-│   ├── collisions.h
-│   ├── enemies.h
-│   ├── heart.h
-│   ├── mapCreator.h
-│   ├── mapDraw.h
-│   ├── fila.h
-│   ├── tree.h
-│   └── graphics/
-│       ├── bullet1.bmp
-│       ├── bullet2.bmp
-│       ├── bullet3.bmp
-│       ├── enemy.bmp
-│       ├── fundo.bmp
-│       ├── heart.bmp
-│       └── player.bmp
-└── README.md
-```
----
-
 ## Equipe
 - Guilherme Aoki
 - Lucas Okamoto Yoshimura
