@@ -1,14 +1,14 @@
 # 🎮 YASEU — Yet Another Shoot'Em Up
-Projeto da disciplina **Algoritmos e Estruturas de Dados**  
+Projeto da disciplina **Algoritmos e Estruturas de Dados** ministrada pelo **Professor Roberto Ferrari** (2025/2)
 Desenvolvido em **C** e executado via **DOSBox**
 
 ---
 
 ## ✨ Sobre o jogo
 
-**YASEU** (*Yet Another Shoot'Em Up*) é um jogo no estilo **space shooter**, criado como parte de um projeto acadêmico para colocar em prática conceitos de **estruturas de dados**, **simulação**, **organização modular** e programação em C.
+**YASEU** (*Yet Another Shoot'Em Up*) é um jogo no estilo **shoot'em up**, criado como parte de um projeto acadêmico para colocar em prática diferentes conceitos de **estruturas de dados**
 
-O jogo foi desenvolvido para rodar em **MS-DOS**, utilizando **DOSBox** e a biblioteca **Allegro** compatível com DOS.
+O jogo foi desenvolvido para rodar em **MS-DOS**, utilizando **DOSBox** e a biblioteca **Allegro 4.2.2** compatível com DOS.
 
 ---
 
@@ -21,7 +21,7 @@ O jogo inclui:
 - Tiros do jogador e dos inimigos  
 - Sistema de colisões  
 - Inimigos com cooldown de ataque  
-- Sistema de vidas  
+- Sistema de vidas
 - Invencibilidade temporária com piscamento do sprite  
 - Limite de entidades simultâneas (balas/inimigos)  
 - HUD simples com informações da partida  
@@ -34,7 +34,7 @@ O desenvolvimento fez uso de diversos tópicos estudados em aula, incluindo:
 
 - Vetores como estruturas de armazenamento fixas para balas e inimigos  
 - Flags de estado (`active`, `is_enemy_bullet`, etc.)  
-- Estruturas (`struct`) para entidades  
+- Estruturas (`filas`) para a organização das ordens das balas e (`árvores`) para o mapeamento das fases
 - Lógica de simulação quadro-a-quadro  
 - Controle de tempo e estados  
 - Modularização com múltiplos arquivos `.c` e `.h`  
