@@ -1,2 +1,63 @@
-# unnamed-game
-Projeto para AED
+# 🎮 YASEU — Yet Another Shoot'Em Up
+Projeto da disciplina **Algoritmos e Estruturas de Dados**  
+Desenvolvido em **C** e executado via **DOSBox**
+
+---
+
+## ✨ Sobre o jogo
+
+**YASEU** (*Yet Another Shoot'Em Up*) é um jogo no estilo **space shooter**, criado como parte de um projeto acadêmico para colocar em prática conceitos de **estruturas de dados**, **simulação**, **organização modular** e programação em C.
+
+O jogo foi desenvolvido para rodar em **MS-DOS**, utilizando **DOSBox** e a biblioteca **Allegro** compatível com DOS.
+
+---
+
+## 🚀 Gameplay
+
+Você controla uma nave espacial e precisa sobreviver enquanto enfrenta ondas de inimigos.  
+O jogo inclui:
+
+- Movimentação suave da nave do jogador  
+- Tiros do jogador e dos inimigos  
+- Sistema de colisões  
+- Inimigos com cooldown de ataque  
+- Sistema de vidas  
+- Invencibilidade temporária com piscamento do sprite  
+- Limite de entidades simultâneas (balas/inimigos)  
+- HUD simples com informações da partida  
+
+---
+
+## 🧠 Conceitos de Algoritmos e Estruturas de Dados Utilizados
+
+O desenvolvimento fez uso de diversos tópicos estudados em aula, incluindo:
+
+- Vetores como estruturas de armazenamento fixas para balas e inimigos  
+- Flags de estado (`active`, `is_enemy_bullet`, etc.)  
+- Estruturas (`struct`) para entidades  
+- Lógica de simulação quadro-a-quadro  
+- Controle de tempo e estados  
+- Modularização com múltiplos arquivos `.c` e `.h`  
+- Colisões usando distância euclidiana  
+- Gerenciamento de ponteiros e memória  
+- Organização e abstração de subsistemas (player, inimigos, balas)  
+
+---
+
+## 📁 Estrutura do Projeto
+
+```text
+/
+├── src/
+│   ├── main.c
+│   ├── player.c / player.h
+│   ├── enemy.c / enemy.h
+│   ├── bullets.c / bullets.h
+│   ├── utils.c / utils.h
+│   └── graphics/
+│       ├── sprites.bmp
+│       └── ...
+├── docs/
+│   └── relatorio.pdf
+├── Makefile
+└── README.md
