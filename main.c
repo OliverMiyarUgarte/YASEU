@@ -1,7 +1,7 @@
 #include <allegro.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <stdbool.h>
 
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 200
@@ -9,12 +9,15 @@
 #define MAX_BULLETS 10
 #define MAX_ENEMIES 5
 #define ENEMY_SHOOT_COOLDOWN 90
+#define PLAYER_INVINCIBILITY_TIME 60
 
 int player_x = 100, player_y = 100;
 int player_health = 10;
 int game_over = 0;
-int bullet_cooldown = 0;
+int bullet_cooldown = 1;
 int ENEMY_RADIUS;
+int player_hit_timer = 0;
+bool player_invincible = false;
 
 #include "bullets.h"
 #include "enemies.h"
@@ -113,12 +116,18 @@ int main(void) {
     blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     int cooldown = 0;
+    int BulletCooldownReduction = 0;
+
     while (!key[KEY_ENTER]){ //bullet selection
+        clear_to_color(buffer, makecol(0, 0, 0));
+        draw_menu(buffer);
+
         draw_bullet_mag(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
+        draw_double(buffer, SCREEN_WIDTH*(4.5/5), 10, (Nelementos(&pbullets[0])-BulletCooldownReduction/60.0));
         
-        if(key[KEY_0] && cooldown <= 0){selectbullet(0); cooldown = 30;}
-        if(key[KEY_1] && cooldown <= 0){selectbullet(1); cooldown = 30;}
-        if(key[KEY_2] && cooldown <= 0){selectbullet(2); cooldown = 30;}
+        if(key[KEY_0] && cooldown <= 0){selectbullet(0); cooldown = 10;}
+        if(key[KEY_1] && cooldown <= 0){selectbullet(1); cooldown = 10; BulletCooldownReduction -= 5;}
+        if(key[KEY_2] && cooldown <= 0){selectbullet(2); cooldown = 10; BulletCooldownReduction += 5;}
 
         cooldown--;
 
@@ -187,8 +196,23 @@ int main(void) {
        check_player_enemy_collision();
 
 
-       //Desenehando avião
-       masked_blit(player, buffer, 0, 0, player_x - player->w / 2, player_y - player->h/2, player->w, player->h);
+        // Desenehando avião
+        if (player_invincible) { 
+            player_hit_timer--; 
+
+            if (player_hit_timer <= 0) { 
+                player_invincible = false; 
+            } 
+        } 
+        if (player_invincible) { 
+            if ((player_hit_timer % 4) < 2) { 
+                masked_blit(player, buffer, 0, 0, player_x - player->w / 2, player_y - player->h / 2, player->w, player->h); 
+            } 
+        } 
+        else{ 
+            masked_blit(player, buffer, 0, 0, player_x - player->w / 2, player_y - player->h / 2, player->w, player->h); 
+        } 
+
        //Desenhando balas
        draw_bullets(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
 
@@ -208,6 +232,7 @@ int main(void) {
 
         //Desenhando a fila
        draw_bullet_mag(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
+       draw_double(buffer, SCREEN_WIDTH*(4.5/5), 10, (bullet_cooldown/60.0));
 
        blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
