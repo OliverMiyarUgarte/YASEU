@@ -127,8 +127,8 @@ int main(void) {
         rest(16);
 
     } 
-    TreeNode* game_map = generate_map(4);
-    TreeNode* map_root = generate_map(4);
+    TreeNode* game_map = generate_map(5);
+    TreeNode* map_root = generate_map(5);
 
     // Map selection screen
     while (!key[KEY_SPACE]) {

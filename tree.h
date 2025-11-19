@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define MAX_CHILDREN 3 
+
 typedef enum {
     NODE_NORMAL,
     NODE_MINIBOSS,
@@ -15,48 +17,45 @@ typedef enum {
 typedef struct TreeNode {
     NodeType type;
     int id;
-    struct TreeNode* left;
-    struct TreeNode* right;
-    struct TreeNode* parent;
+    struct TreeNode* children[MAX_CHILDREN]; 
+    int num_children; 
+    struct TreeNode* parent; 
 } TreeNode;
 
 TreeNode* create_node(int id, NodeType type);
-void connect_nodes(TreeNode* parent, TreeNode* left, TreeNode* right);
+void connect_nodes(TreeNode* parent, TreeNode* children[], int num_children);
 void destroy_tree(TreeNode* root);
-void print_tree(TreeNode* root, int depth);
-
 
 TreeNode* create_node(int id, NodeType type) {
     TreeNode* node = (TreeNode*)malloc(sizeof(TreeNode));
     if (!node) return NULL;
     node->id = id;
     node->type = type;
-    node->left = node->right = node->parent = NULL;
+    node->num_children = 0;
+    node->parent = NULL;
+    for (int i = 0; i < MAX_CHILDREN; i++) {
+        node->children[i] = NULL;
+    }
     return node;
 }
 
-void connect_nodes(TreeNode* parent, TreeNode* left, TreeNode* right) {
-    if (parent) {
-        parent->left = left;
-        parent->right = right;
-        if (left) left->parent = parent;
-        if (right) right->parent = parent;
+void connect_nodes(TreeNode* parent, TreeNode* children[], int num_children) {
+    if (parent && num_children <= MAX_CHILDREN) {
+        parent->num_children = num_children;
+        for (int i = 0; i < num_children; i++) {
+            if (children[i]) {
+                parent->children[i] = children[i];
+                children[i]->parent = parent;
+            }
+        }
     }
 }
 
 void destroy_tree(TreeNode* root) {
     if (!root) return;
-    destroy_tree(root->left);
-    destroy_tree(root->right);
-    free(root);
+    for (int i = 0; i < root->num_children; i++) {
+        destroy_tree(root->children[i]); 
+    }
+    free(root); 
 }
-
-void print_tree(TreeNode* root, int depth) {
-    if (!root) return;
-    for (int i = 0; i < depth; i++) printf("   ");
-    const char* names[] = {"Normal", "MiniBoss", "Event", "Store", "Boss"};
-    printf("Node %d (%s)\n", root->id, names[root->type]);
-    print_tree(root->left, depth + 1);
-    print_tree(root->right, depth + 1);
-}
-#endif 
+#endif
