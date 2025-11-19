@@ -33,7 +33,7 @@ O jogo inclui:
 ## Controles
 
 ```text
-a d s w   Movimentação
+w a s d   Movimentação
 Espaço        Atirar
 Esc           Sair do jogo
 ```
