@@ -1,0 +1,104 @@
+#include <iostream>
+#include <queue>
+#include <stack>
+#include <vector>
+#include <string>
+
+using namespace std;
+
+//
+// -------------------------
+// ÁRVORE DE CATEGORIAS
+// -------------------------
+struct NoSom {
+    string categoria;
+    vector<string> sons;
+    vector<NoSom*> filhos;
+
+    NoSom(string c) : categoria(c) {}
+
+    void adicionarSom(const string& som) {
+        sons.push_back(som);
+    }
+
+    void adicionarFilho(NoSom* f) {
+        filhos.push_back(f);
+    }
+
+    void listar(int nivel = 0) {
+        string tab = string(nivel * 2, ' ');
+        cout << tab << "[Categoria] " << categoria << endl;
+
+        for (auto& s : sons) {
+            cout << tab << "  - " << s << endl;
+        }
+
+        for (auto* filho : filhos) {
+            filho->listar(nivel + 1);
+        }
+    }
+};
+
+int main() {
+
+    cout << "==============================\n";
+    cout << " SISTEMA COMPLETO DE SONS\n";
+    cout << " FILA + PILHA + ÁRVORE\n";
+    cout << "==============================\n\n";
+
+    //
+    // ---------------------------------
+    // 1) ÁRVORE — organização dos sons
+    // ---------------------------------
+    //
+    NoSom* raiz = new NoSom("Efeitos Sonoros");
+
+    NoSom* mortes = new NoSom("Mortes");
+    mortes->adicionarSom("Explosão: nave do inimigo morreu");
+    mortes->adicionarSom("Alerta: sua nave morreu");
+
+    NoSom* itens = new NoSom("Itens");
+    itens->adicionarSom("Item coletado");
+
+    raiz->adicionarFilho(mortes);
+    raiz->adicionarFilho(itens);
+
+    cout << "\n=== ÁRVORE DE SONS ===\n";
+    raiz->listar();
+
+
+    //
+    // ---------------------------
+    // 2) FILA de reprodução (FIFO)
+    // ---------------------------
+    //
+    queue<string> filaSons;
+    filaSons.push("Explosão: nave do inimigo morreu");
+    filaSons.push("Alerta: sua nave morreu");
+    filaSons.push("Item coletado");
+
+    cout << "\n=== REPRODUÇÃO COM FILA (FIFO) ===\n";
+    while (!filaSons.empty()) {
+        cout << "Tocando som: " << filaSons.front() << endl;
+        filaSons.pop();
+    }
+
+
+    //
+    // ---------------------------
+    // 3) PILHA de reprodução (LIFO)
+    // ---------------------------
+    //
+    stack<string> pilhaSons;
+    pilhaSons.push("Explosão: nave do inimigo morreu");
+    pilhaSons.push("Alerta: sua nave morreu");
+    pilhaSons.push("Item coletado");
+
+    cout << "\n=== REPRODUÇÃO COM PILHA (LIFO) ===\n";
+    while (!pilhaSons.empty()) {
+        cout << "Tocando som: " << pilhaSons.top() << endl;
+        pilhaSons.pop();
+    }
+
+    return 0;
+}
