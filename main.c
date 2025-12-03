@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
+
 
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 200
@@ -12,7 +14,7 @@
 #define PLAYER_INVINCIBILITY_TIME 60
 
 int player_x = 100, player_y = 100;
-int player_health = 10;
+int player_health = 5;
 int game_over = 0;
 int bullet_cooldown = 1;
 int ENEMY_RADIUS;
@@ -26,8 +28,12 @@ bool player_invincible = false;
 #include "mapCreator.h"
 #include "mapDraw.h"
 #include "heart.h"
+#include "upgrades.h"
 
 int main(void) {
+
+    srand(time(NULL));
+
    if (allegro_init() != 0) {
        printf("Error initializing Allegro!\n");
        return 1;
@@ -115,29 +121,97 @@ int main(void) {
     draw_menu(buffer);
     blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
+    while (!key[KEY_ENTER]){};
+    while (key[KEY_ENTER]){};
+
     int cooldown = 0;
-    int BulletCooldownReduction = 0;
+    int deselected;
+    int cdreduction = getcooldown();
 
-    while (!key[KEY_ENTER]){ //bullet selection
+
+
+    randomize_upgrades();
+
+    while (1) { // upgrade selection
+        cdreduction = getcooldown();
+
         clear_to_color(buffer, makecol(0, 0, 0));
-        draw_menu(buffer);
 
-        draw_bullet_mag(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
-        draw_double(buffer, SCREEN_WIDTH*(4.5/5), 10, (Nelementos(&pbullets[0])-BulletCooldownReduction/60.0));
-        
-        if(key[KEY_0] && cooldown <= 0){selectbullet(0); cooldown = 10;}
-        if(key[KEY_1] && cooldown <= 0){selectbullet(1); cooldown = 10; BulletCooldownReduction -= 5;}
-        if(key[KEY_2] && cooldown <= 0){selectbullet(2); cooldown = 10; BulletCooldownReduction += 5;}
+        draw_upgrades_menu(buffer);
+
+        if (key[KEY_1] && cooldown <= 0) {
+            int id = all_upgrades[ upgrade_slot[0] ].id;
+            selectupgrade(id);
+            break;
+        }
+
+        if (key[KEY_2] && cooldown <= 0) {
+            int id = all_upgrades[ upgrade_slot[1] ].id;
+            selectupgrade(id);
+            break;
+        }
+
+        if (key[KEY_3] && cooldown <= 0) {
+            int id = all_upgrades[ upgrade_slot[2] ].id;
+            selectupgrade(id);
+            break;
+        }
+
+        if (key[KEY_4] && cooldown <= 0) {
+            player_health += 5;
+            break;
+        }
+
+        if (key[KEY_ENTER]) {
+            while (key[KEY_ENTER]) {};
+            break;
+        }
 
         cooldown--;
 
         blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+      rest(16);
+    }
 
+    while (1){ //bullet selection
+
+        cdreduction = getcooldown();
+
+        clear_to_color(buffer, makecol(0, 0, 0));
+
+        draw_bullets_menu(buffer, playerBullet1, playerBullet2, playerBullet3, &cdreduction);
+        
+        textprintf_ex(buffer, font, 20, 40, makecol(10, 200, 10), -1, "%s: %.2f", "Reload Cooldown", ((Nelementos(&pbullets[0])*10.0 - cdreduction)/60)>0 ? (Nelementos(&pbullets[0])*10.0 - cdreduction)/60 : 0.1);
+        textprintf_ex(buffer, font, 20, 60, makecol(10, 200, 10), -1, "%s: %d", "Max mag Size", getmagsize());
+        
+        if(key[KEY_1] && cooldown <= 0 && (Nelementos(&pbullets[0]) < maxmagsize)){selectbullet(0); cooldown = 10;}
+        if(key[KEY_2] && cooldown <= 0 && (Nelementos(&pbullets[0]) < maxmagsize)){selectbullet(1); cooldown = 10; addcooldown(-5);}
+        if(key[KEY_3] && cooldown <= 0 && (Nelementos(&pbullets[0]) < maxmagsize)){selectbullet(2); cooldown = 10; addcooldown(5);}
+        if(key[KEY_BACKSPACE] && cooldown <= 0){
+            deselected = deselectbullet();
+            if (deselected == 1){addcooldown(5);}
+            if (deselected == 2){addcooldown(-5);}
+            cooldown = 10;
+        }
+
+        if(key[KEY_ENTER]) {
+            if (Vazia(&pbullets[0])){
+                textout_centre_ex(buffer, font, "Warning: No bullets selected", SCREEN_W / 2, 100, makecol(255, 50, 50), -1);
+            }else{
+                while (key[KEY_ENTER]){};
+                break;
+            }
+        }
+
+
+        cooldown--;
+        blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         rest(16);
 
     } 
-    TreeNode* game_map = generate_map(5);
-    TreeNode* map_root = generate_map(5);
+
+    TreeNode* game_map = generate_map(4);
+    TreeNode* map_root = generate_map(4);
 
     // Map selection screen
     while (!key[KEY_SPACE]) {
@@ -178,7 +252,7 @@ int main(void) {
        if (key[KEY_DOWN] && player_y + PLAYER_RADIUS < SCREEN_HEIGHT) { player_y += 4; }
        if (key[KEY_LEFT] && player_x - PLAYER_RADIUS > SCREEN_WIDTH / 4) { player_x -= 4; }
        if (key[KEY_RIGHT] && player_x + PLAYER_RADIUS < (SCREEN_WIDTH * 3) / 4) { player_x += 4; }
-       if (key[KEY_SPACE] && bullet_cooldown == 0) { shoot_bullet(player_x, player_y + 5, 0); }
+       if (key[KEY_SPACE] && bullet_cooldown <= 0) { shoot_bullet(player_x, player_y + 5, 0); }
       
        if (key[KEY_ESC]) { break; }
 
@@ -231,8 +305,9 @@ int main(void) {
 
 
         //Desenhando a fila
-       draw_bullet_mag(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
+       draw_bullet_mag(buffer, playerBullet1, playerBullet2, playerBullet3);
        draw_double(buffer, SCREEN_WIDTH*(4.5/5), 10, (bullet_cooldown/60.0));
+
 
        blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 

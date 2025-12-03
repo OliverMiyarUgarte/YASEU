@@ -7,8 +7,8 @@ typedef struct {
    int speedx; // n usado
    int speedy;
    int radius;
-   int cooldown;
-   int damage;
+   double cooldown;
+   double damage;
    int spread;
 } Bullet;
 
@@ -21,6 +21,38 @@ int ativa = 0;
 int deucerto;
 
 int BulletCooldownReduction = 0;
+int ShootingSpeedBonus = 0;
+int DmgBonus= 0;
+int maxmagsize = 5;
+
+void addcooldown(int n){
+    BulletCooldownReduction += n;
+}
+int getcooldown(){
+    return BulletCooldownReduction;
+}
+
+void addshootingspeed(int n){
+    ShootingSpeedBonus += n;
+}
+int getshootingspeed(){
+    return ShootingSpeedBonus;
+}
+
+void adddmg(int n){
+    DmgBonus += n;
+}
+int getdmg(){
+    return DmgBonus;
+}
+
+void addmagsize(int n){
+    maxmagsize += n;
+}
+int getmagsize(){
+    return maxmagsize;
+}
+
 
 void init_bullets() {
    for (int i = 0; i < MAX_BULLETS; i++) {
@@ -59,25 +91,42 @@ void init_bullets() {
 
 void selectbullet(int i){
     int x;
-    Insere(&pbullets[0], i, &x);
+    if (Nelementos(&pbullets[0]) < maxmagsize){
+        Insere(&pbullets[0], i, &x);
+    } 
 }
 
-void deselectbullet(){
-    fila aux;
+int deselectbullet() {
     int bullet;
     int ok;
-    int n = 0;
-    while(!Vazia(&pbullets[0])){
-        Retira(&pbullets[0], &bullet, &ok);
-        Insere(&aux, bullet, &ok);
-        n++;
+
+    if (Vazia(&pbullets[0])) {
+        return -1; 
     }
 
-    while (n>1){
-        Retira(&aux, &bullet, &ok);
-        Insere(&pbullets[0], bullet, &ok);
+    Node *atual = pbullets[0].primeiro;
+    Node *anterior = NULL;
+
+    while (atual->next != NULL) {
+        anterior = atual;
+        atual = atual->next;
     }
+
+    bullet = atual->info;
+
+    if (anterior == NULL) {
+        pbullets[0].primeiro = NULL;
+        pbullets[0].ultimo   = NULL;
+    } else {
+        anterior->next = NULL;
+        pbullets[0].ultimo = anterior;
+    }
+
+    free(atual);
+    return bullet;
 }
+
+
 
 void shoot_bullet(int x, int y, int is_enemy_bullet) {
    if (is_enemy_bullet == 0 && bullet_cooldown > 0) {
@@ -114,11 +163,11 @@ void shoot_bullet(int x, int y, int is_enemy_bullet) {
                     bullets[i].speedx = (btypes[atual].spread == 0) ? 0 : (rand() % 2 == 0) ? rand() % btypes[atual].spread : -rand() % btypes[atual].spread;
                     bullets[i].speedy = btypes[atual].speedy;
                     bullets[i].radius = btypes[atual].radius;
-                    bullets[i].cooldown = btypes[atual].cooldown;
-                    bullets[i].damage = btypes[atual].damage;
+                    bullets[i].cooldown = btypes[atual].cooldown - btypes[atual].cooldown*(ShootingSpeedBonus/100.0);
+                    bullets[i].damage = btypes[atual].damage + btypes[atual].damage * DmgBonus/100.0;
                } else {
                    ativa = 1 - ativa; 
-                   bullet_cooldown = Nelementos(&pbullets[ativa])*10 - BulletCooldownReduction;
+                   bullet_cooldown = (Nelementos(&pbullets[ativa])*10 - BulletCooldownReduction);
                    bullets[i].active = 0;
                }
            }
@@ -145,9 +194,7 @@ void draw_double(BITMAP *buffer, int x, int y, double value){
     textprintf_ex(buffer, font, x, y, makecol(10, 200, 10), -1, "%.1f", value);
 }
 
-
-
-void draw_bullet_mag(BITMAP* buffer, BITMAP* enemy_bullet1, BITMAP* playerBullet1, BITMAP* playerBullet2, BITMAP* playerBullet3) {
+void draw_bullet_mag(BITMAP* buffer, BITMAP* playerBullet1, BITMAP* playerBullet2, BITMAP* playerBullet3) {
     fila temp;
     Cria(&temp);
     int pos = 10;
@@ -173,6 +220,57 @@ void draw_bullet_mag(BITMAP* buffer, BITMAP* enemy_bullet1, BITMAP* playerBullet
     }
 }
 
+void draw_horizontal_bullet_mag(BITMAP* buffer, BITMAP* playerBullet1, BITMAP* playerBullet2, BITMAP* playerBullet3) {
+    fila temp;
+    Cria(&temp);
+
+    int count = 0;
+    int atual;
+
+
+    while (!Vazia(&pbullets[ativa])) {
+        Retira(&pbullets[ativa], &atual, &deucerto);
+        Insere(&temp, atual, &deucerto);
+        count++;
+    }
+
+
+    while (!Vazia(&temp)) {
+        Retira(&temp, &atual, &deucerto);
+        Insere(&pbullets[ativa], atual, &deucerto);
+    }
+
+    if (count == 0) return;
+
+
+    int spacing = 12;   
+    int total_width = count * spacing;
+    int start_x = (SCREEN_WIDTH / 2) - (total_width / 2);
+    int y = 75;
+
+    int angle = itofix(64); 
+
+    Cria(&temp);
+    while (!Vazia(&pbullets[ativa])) {
+        Retira(&pbullets[ativa], &atual, &deucerto);
+        Insere(&temp, atual, &deucerto);
+
+        BITMAP* sprite = NULL;
+
+        if (atual == 0) sprite = playerBullet1;
+        if (atual == 1) sprite = playerBullet2;
+        if (atual == 2) sprite = playerBullet3;
+
+        rotate_sprite(buffer, sprite, start_x, y, angle);
+
+        start_x += spacing;
+    }
+
+    while (!Vazia(&temp)) {
+        Retira(&temp, &atual, &deucerto);
+        Insere(&pbullets[ativa], atual, &deucerto);
+    }
+}
 
 void update_bullets() {
    if (bullet_cooldown > 0) {
@@ -209,16 +307,16 @@ void draw_bullets(BITMAP* buffer, BITMAP* enemy_bullet1, BITMAP* playerBullet1, 
    for (int i = 0; i < MAX_BULLETS; i++) {
        if (bullets[i].active) {
            if (bullets[i].is_enemy_bullet) {
-               circlefill(buffer, bullets[i].x - 5, bullets[i].y + 5, bullets[i].radius, makecol(255, 50, 50)); //Adicionei
+               circlefill(buffer, bullets[i].x - 5, bullets[i].y + 5, bullets[i].radius, makecol(255, 50, 50)); 
            } else {
                if(bullets[i].radius == 3){
-                    masked_blit(playerBullet1, buffer, 0, 0, bullets[i].x - playerBullet1->w / 2 - 10, bullets[i].y - playerBullet1->h / 2 - 20, playerBullet1->w, playerBullet1->h); //Adicionei
+                    masked_blit(playerBullet1, buffer, 0, 0, bullets[i].x - playerBullet1->w / 2 - 10, bullets[i].y - playerBullet1->h / 2 - 20, playerBullet1->w, playerBullet1->h); 
                }
                if(bullets[i].radius == 5){
-                    masked_blit(playerBullet2, buffer, 0, 0, bullets[i].x - playerBullet2->w / 2 - 10, bullets[i].y - playerBullet2->h / 2 - 20, playerBullet2->w, playerBullet2->h); //Adicionei
+                    masked_blit(playerBullet2, buffer, 0, 0, bullets[i].x - playerBullet2->w / 2 - 10, bullets[i].y - playerBullet2->h / 2 - 20, playerBullet2->w, playerBullet2->h); 
                }
                if(bullets[i].radius == 1){
-                    masked_blit(playerBullet3, buffer, 0, 0, bullets[i].x - playerBullet3->w / 2 - 10, bullets[i].y - playerBullet3->h / 2 - 20, playerBullet3->w, playerBullet3->h); //Adicionei
+                    masked_blit(playerBullet3, buffer, 0, 0, bullets[i].x - playerBullet3->w / 2 - 10, bullets[i].y - playerBullet3->h / 2 - 20, playerBullet3->w, playerBullet3->h); 
                }
            }
        }

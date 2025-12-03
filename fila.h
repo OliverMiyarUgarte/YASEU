@@ -75,3 +75,14 @@ int Nelementos(fila *f) {
 
     return count;
 }
+
+void Transfere(fila *origem, fila *destino) {
+    int x, deu;
+
+    while (!Vazia(origem)) {
+        Retira(origem, &x, &deu);
+        if (deu) {
+            Insere(destino, x, &deu);
+        }
+    }
+}
