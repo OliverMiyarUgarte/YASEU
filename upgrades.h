@@ -132,7 +132,7 @@ void selectupgrade(int n){
     }
 }
 
-void draw_bullets_menu(BITMAP* buffer, BITMAP *playerBullet1, BITMAP *playerBullet2, BITMAP *playerBullet3, int* BulletCooldownReduction) {
+void draw_bullets_menu(BITMAP* buffer, BITMAP *playerBullet1, BITMAP *playerBullet2, BITMAP *playerBullet3, double* BulletCooldownReduction) {
     clear_to_color(buffer, makecol(0, 0, 0));
     
     const char* title = "Bullet Selection";
@@ -155,3 +155,4 @@ void draw_bullets_menu(BITMAP* buffer, BITMAP *playerBullet1, BITMAP *playerBull
 
     draw_horizontal_bullet_mag(buffer, playerBullet1, playerBullet2, playerBullet3);
 }
+

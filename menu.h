@@ -53,17 +53,7 @@ void draw_menu(BITMAP* buffer) {
     textprintf_centre_ex(buffer, font, screen_width/2, 90, color_green, -1, "Lucas Yoshimura");
     textprintf_centre_ex(buffer, font, screen_width/2, 105, color_green, -1, "Oliver Ugarte");
 
-    // 3. Seleção de Balas com Feedback Visual
-    textprintf_centre_ex(buffer, font, screen_width/2, 130, color_green, -1, "Press 0 / 1 / 2 to select bullets");
-    
-    // Desenha indicadores simples do que está na fila
-    // Isso assume que pbullets e Nelementos estão acessíveis (include bullets.h)
-    char status_bullets[50];
-    int qtd = Nelementos(&pbullets[ativa]); // Função da sua fila.h
-    sprintf(status_bullets, "Loaded: %d rounds", qtd);
-    textprintf_centre_ex(buffer, font, screen_width/2, 145, makecol(200, 200, 10), -1, status_bullets);
-
-    // 4. Start
+    // 3. Start
     if ((retrace_count / 30) % 2 == 0) { // Efeito de piscar (Blink) a cada meio segundo
         textprintf_centre_ex(buffer, font, screen_width/2, 170, color_green, -1, "Press ENTER to start");
     }
