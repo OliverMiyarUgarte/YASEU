@@ -233,7 +233,7 @@ int main(void) {
 
             // --- LÓGICA ESPECIAL PARA A LOJA ---
             if (current_node->type == NODE_STORE) {
-                // 1. INTRODUÇÃO DA LOJA
+                // 1. INTRODUÇÃO DA LOJA (ANIMAÇÃO DOCKING)
                 clear_to_color(buffer, makecol(0,0,0));
                 stretch_blit(loja_bg, buffer, 0, 0, loja_bg->w, loja_bg->h, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
                 textout_centre_ex(buffer, font, "STATION DOCKED", SCREEN_WIDTH/2, SCREEN_HEIGHT/2, makecol(255,255,255), -1);
@@ -242,7 +242,9 @@ int main(void) {
 
                 int menu_cooldown = 10;
                 
-                // 2. MENU DE UPGRADES
+                // ----------------------------------------------------
+                // 2. PASSO UM: MENU DE UPGRADES
+                // ----------------------------------------------------
                 randomize_upgrades();
                 while (1) { 
                     clear_to_color(buffer, makecol(20, 20, 30)); 
@@ -251,30 +253,36 @@ int main(void) {
                     if (key[KEY_1] && menu_cooldown <= 0) { selectupgrade(all_upgrades[upgrade_slot[0]].id); break; }
                     if (key[KEY_2] && menu_cooldown <= 0) { selectupgrade(all_upgrades[upgrade_slot[1]].id); break; }
                     if (key[KEY_3] && menu_cooldown <= 0) { selectupgrade(all_upgrades[upgrade_slot[2]].id); break; }
-                    // Opção 4: CURAR (Corrigido)
+                    
+                    // Opção 4: CURAR
                     if (key[KEY_4] && menu_cooldown <= 0) { 
-                        if (player_health < 5) { // Só cura se não estiver cheio
-                            player_health += 5;  // Recupera 1 coração
-                    
-                        // TRAVA DE SEGURANÇA: Espera soltar a tecla 4
-                        while(key[KEY_4]) { rest(10); }
-                    
-                        break; // Sai do menu e volta para a loja
+                        if (player_health < 5) { 
+                            player_health += 1; 
+                            if(player_health > 5) player_health = 5;
+                        }
+                        while(key[KEY_4]) { rest(10); } 
+                        break; 
                     }
-                    if (key[KEY_ENTER] && menu_cooldown <= 0) break; // Pular
+                    
+                    if (key[KEY_ENTER] && menu_cooldown <= 0) break; // Pular Upgrade
 
                     if (menu_cooldown > 0) menu_cooldown--;
                     blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
                     rest(16);
                 }
                 
+                // --- SEGURANÇA ENTRE MENUS ---
+                // Espera soltar teclas para não selecionar bala sem querer
+                while(key[KEY_ENTER] || key[KEY_1] || key[KEY_2] || key[KEY_3] || key[KEY_4]) { rest(10); }
                 menu_cooldown = 10;
 
-                // 3. MENU DE BALAS (RELOAD - LOJA)
+                // ----------------------------------------------------
+                // 3. PASSO DOIS: MENU DE BALAS (RELOAD)
+                // ----------------------------------------------------
                 while (1) {
                     Transfere(&pbullets[1], &pbullets[0]); 
                     double cdreduction = getcooldown();
-                    clear_to_color(buffer, makecol(20, 30, 20)); 
+                    clear_to_color(buffer, makecol(20, 30, 20)); // Cor verde para diferenciar
 
                     draw_bullets_menu(buffer, playerBullet1, playerBullet2, playerBullet3, &cdreduction);
                     
@@ -306,7 +314,7 @@ int main(void) {
                     rest(16);
                 }
             } 
-        }else {
+            else {
                 // Intro das fases normais
                 clear_to_color(buffer, makecol(0,0,0));
                 textout_centre_ex(buffer, font, level_message, SCREEN_WIDTH/2, SCREEN_HEIGHT/2, makecol(255,255,255), -1);
@@ -405,12 +413,8 @@ int main(void) {
                 blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
                 rest(500); 
                 
-                // --- CORREÇÃO AQUI ---
-                // Espera soltar o Enter anterior (se houver)
                 while(key[KEY_ENTER]) { rest(10); } 
-                // Espera apertar de novo
                 while(!key[KEY_ENTER]) { rest(10); }
-                // Espera soltar de novo antes de ir pro mapa
                 while(key[KEY_ENTER]) { rest(10); }
             }
         }
