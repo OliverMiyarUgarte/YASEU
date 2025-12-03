@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <time.h> 
+#include <time.h>
+
 
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 200
@@ -14,7 +15,7 @@
 
 // Variáveis Globais
 int player_x = 100, player_y = 100;
-int player_health = 50;
+int player_health = 5;
 int game_over = 0;
 int bullet_cooldown = 1;
 int ENEMY_RADIUS; 
@@ -38,6 +39,7 @@ char* level_message = "";
 #include "mapCre~1.h"
 #include "mapDraw.h"
 #include "heart.h"
+#include "upgrades.h"
 
 // Função auxiliar para carregar sprites
 BITMAP* load_bitmap_resized(const char* filename, int new_w, int new_h) {
