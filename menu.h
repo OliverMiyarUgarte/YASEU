@@ -1,55 +1,70 @@
-void draw_menu(BITMAP* buffer) {
-    clear_to_color(buffer, makecol(0, 0, 0));
-    
-    int screen_width = 320;
+// Variável global ou estática para o título cacheado
+BITMAP *title_bitmap_cache = NULL;
 
-    //Título
+void init_menu_assets() {
+    if (title_bitmap_cache != NULL) return; // Já criado
+
     const char* title = "YASEU";
-    int escala = 4;
-
-    int largura_original = text_length(font, title);
-    int altura_original = text_height(font);
-
-    BITMAP *title_buffer = create_bitmap(largura_original, altura_original);
+    int w = text_length(font, title);
+    int h = text_height(font);
     
-    if (title_buffer) {
-        clear_to_color(title_buffer, bitmap_mask_color(buffer)); // Fundo transparente
-        textout_ex(title_buffer, font, title, 0, 0, makecol(10, 200, 10), -1);
+    // Cria o buffer pequeno original
+    BITMAP *temp = create_bitmap(w, h);
+    clear_to_color(temp, makecol(255, 0, 255)); // Magic pink para transparência
+    textout_ex(temp, font, title, 0, 0, makecol(10, 200, 10), -1);
 
-        int largura_final = largura_original * escala;
-        int x_title = (screen_width - largura_final) / 2;
+    // Cria o bitmap final já na escala 4x
+    int escala = 4;
+    title_bitmap_cache = create_bitmap(w * escala, h * escala);
+    clear_to_color(title_bitmap_cache, makecol(255, 0, 255)); // Fundo transparente
 
-        masked_stretch_blit(title_buffer, buffer, 0, 0,largura_original, altura_original,x_title, 10,largura_final, altura_original * escala);
+    // Faz o stretch uma única vez no início do jogo
+    stretch_blit(temp, title_bitmap_cache, 0, 0, w, h, 0, 0, w * escala, h * escala);
+    
+    destroy_bitmap(temp); // Destrói o temporário
+}
 
-        destroy_bitmap(title_buffer);
+// Chame isso quando fechar o jogo para não vazar memória
+void destroy_menu_assets() {
+    if (title_bitmap_cache) {
+        destroy_bitmap(title_bitmap_cache);
+        title_bitmap_cache = NULL;
+    }
+}
+
+void draw_menu(BITMAP* buffer) {
+    // Garante que o asset existe (lazy initialization)
+    if (!title_bitmap_cache) init_menu_assets();
+
+    clear_to_color(buffer, makecol(0, 0, 0));
+    int screen_width = SCREEN_W; // Usa a largura real da Allegro
+
+    // 1. Desenha o Título Otimizado
+    if (title_bitmap_cache) {
+        int x_title = (screen_width - title_bitmap_cache->w) / 2;
+        masked_blit(title_bitmap_cache, buffer, 0, 0, x_title, 10, title_bitmap_cache->w, title_bitmap_cache->h);
     }
 
-    // Créditos 
-    const char* created = "Created by";
-    int x_created = (screen_width - text_length(font, created)) / 2;
-    textprintf_ex(buffer, font, x_created, 60, makecol(10, 200, 10), -1, created);
+    // 2. Créditos (Mantido igual)
+    int color_green = makecol(10, 200, 10);
+    
+    textprintf_centre_ex(buffer, font, screen_width/2, 60, color_green, -1, "Created by");
+    textprintf_centre_ex(buffer, font, screen_width/2, 75, color_green, -1, "Guilherme Aoki");
+    textprintf_centre_ex(buffer, font, screen_width/2, 90, color_green, -1, "Lucas Yoshimura");
+    textprintf_centre_ex(buffer, font, screen_width/2, 105, color_green, -1, "Oliver Ugarte");
 
-    const char* author1 = "Guilherme Aoki";
-    int x_author1 = (screen_width - text_length(font, author1)) / 2;
-    textprintf_ex(buffer, font, x_author1, 75, makecol(10, 200, 10), -1, author1);
+    // 3. Seleção de Balas com Feedback Visual
+    textprintf_centre_ex(buffer, font, screen_width/2, 130, color_green, -1, "Press 0 / 1 / 2 to select bullets");
+    
+    // Desenha indicadores simples do que está na fila
+    // Isso assume que pbullets e Nelementos estão acessíveis (include bullets.h)
+    char status_bullets[50];
+    int qtd = Nelementos(&pbullets[ativa]); // Função da sua fila.h
+    sprintf(status_bullets, "Loaded: %d rounds", qtd);
+    textprintf_centre_ex(buffer, font, screen_width/2, 145, makecol(200, 200, 10), -1, status_bullets);
 
-    const char* author2 = "Lucas Yoshimura";
-    int x_author2 = (screen_width - text_length(font, author2)) / 2;
-    textprintf_ex(buffer, font, x_author2, 90, makecol(10, 200, 10), -1, author2);
-
-    const char* author3 = "Oliver Ugarte";
-    int x_author3 = (screen_width - text_length(font, author3)) / 2;
-    textprintf_ex(buffer, font, x_author3, 105, makecol(10, 200, 10), -1, author3);
-
-    // Escolher os tiros
-    const char* select_msg = "Press 0 / 1 / 2 to select bullets";
-    int x_select = (screen_width - text_length(font, select_msg)) / 2;
-    textprintf_ex(buffer, font, x_select, 120, makecol(10, 200, 10), -1, select_msg);
-
-    // Mensagem para iniciar 
-    const char* start_msg = "Press ENTER to start";
-    int x_start = (screen_width - text_length(font, start_msg)) / 2;
-    textprintf_ex(buffer, font, x_start, 150, makecol(10, 200, 10), -1, start_msg);
-
-
+    // 4. Start
+    if ((retrace_count / 30) % 2 == 0) { // Efeito de piscar (Blink) a cada meio segundo
+        textprintf_centre_ex(buffer, font, screen_width/2, 170, color_green, -1, "Press ENTER to start");
+    }
 }

@@ -32,25 +32,27 @@ void init_bullets() {
    Cria(&pbullets[0]);
    Cria(&pbullets[1]);
 
-   //setup bullet types
+   //setup bullet types (ORIGINAIS)
+   // Tipo 0
    btypes[0].speedx = 0; 
    btypes[0].speedy = 4; 
-   btypes[0].radius = 3;
+   btypes[0].radius = 3; // Restaurado para 3
    btypes[0].cooldown = 5;
    btypes[0].damage = 1;
    btypes[0].spread = 1;
 
+   // Tipo 1
    btypes[1].speedx = 0; 
    btypes[1].speedy = 2; 
-   btypes[1].radius = 5;
+   btypes[1].radius = 5; // Restaurado para 5
    btypes[1].cooldown = 10;
    btypes[1].damage = 2;
    btypes[1].spread = 0;
 
-
+   // Tipo 2
    btypes[2].speedx = 0;
    btypes[2].speedy = 7; 
-   btypes[2].radius = 1;
+   btypes[2].radius = 1; // Mantido 1
    btypes[2].cooldown = 2; 
    btypes[2].damage = 1;
    btypes[2].spread = 3;
@@ -94,13 +96,20 @@ void shoot_bullet(int x, int y, int is_enemy_bullet) {
            int deucerto = 1;
 
            if (is_enemy_bullet) {
+                // VOLTA A LÓGICA ORIGINAL DO INIMIGO (Usando btypes aleatórios)
                 bullets[i].x = x;
-               int rand_index = rand() % 3;
-               bullets[i].speedx = (bullets[i].spread == 0) ? 0 : (rand() % 2 == 0) ? rand() % bullets[i].spread : -rand() % bullets[i].spread;
-               bullets[i].speedy = btypes[rand_index].speedy;
-               bullets[i].radius = btypes[rand_index].radius;
-               bullets[i].cooldown = btypes[rand_index].cooldown;
-               bullets[i].damage = btypes[rand_index].damage;
+                int rand_index = rand() % 3;
+               
+                // Nota: O código original tinha um bug lógico aqui acessando bullets[i].spread antes de definir,
+                // mas corrigi para usar btypes[rand_index].spread para manter a lógica funcional.
+                bullets[i].spread = btypes[rand_index].spread; 
+                
+                bullets[i].speedx = (bullets[i].spread == 0) ? 0 : (rand() % 2 == 0) ? rand() % bullets[i].spread : -rand() % bullets[i].spread;
+                bullets[i].speedy = btypes[rand_index].speedy;
+                bullets[i].radius = btypes[rand_index].radius;
+                bullets[i].cooldown = btypes[rand_index].cooldown;
+                bullets[i].damage = btypes[rand_index].damage;
+
            } else { // player bullet
                if (Vazia(&pbullets[0]) && Vazia(&pbullets[1])) { // no bullet selected
                     bullets[i].active = 0;
@@ -183,11 +192,11 @@ void update_bullets() {
        if (bullets[i].active) {
            if (bullets[i].is_enemy_bullet) {
                bullets[i].x += bullets[i].speedx;
-               if (bullets[i].x > SCREEN_HEIGHT) {
+               if (bullets[i].x > SCREEN_WIDTH) { // Mantido WIDTH conforme correções recentes
                    bullets[i].active = 0;
                }
                 bullets[i].y += bullets[i].speedy;
-               if (bullets[i].y > SCREEN_WIDTH) {
+               if (bullets[i].y > SCREEN_HEIGHT) { // Mantido HEIGHT conforme correções recentes
                    bullets[i].active = 0;
                }
            }
@@ -209,19 +218,38 @@ void draw_bullets(BITMAP* buffer, BITMAP* enemy_bullet1, BITMAP* playerBullet1, 
    for (int i = 0; i < MAX_BULLETS; i++) {
        if (bullets[i].active) {
            if (bullets[i].is_enemy_bullet) {
-               circlefill(buffer, bullets[i].x - 5, bullets[i].y + 5, bullets[i].radius, makecol(255, 50, 50)); //Adicionei
+               // Volta ao desenho original com offset
+               circlefill(buffer, bullets[i].x - 5, bullets[i].y + 5, bullets[i].radius, makecol(255, 50, 50)); 
            } else {
+               // Verifica os raios originais (3, 5, 1)
                if(bullets[i].radius == 3){
-                    masked_blit(playerBullet1, buffer, 0, 0, bullets[i].x - playerBullet1->w / 2 - 10, bullets[i].y - playerBullet1->h / 2 - 20, playerBullet1->w, playerBullet1->h); //Adicionei
+                    masked_blit(playerBullet1, buffer, 0, 0, bullets[i].x - playerBullet1->w / 2 - 10, bullets[i].y - playerBullet1->h / 2 - 20, playerBullet1->w, playerBullet1->h); 
                }
                if(bullets[i].radius == 5){
-                    masked_blit(playerBullet2, buffer, 0, 0, bullets[i].x - playerBullet2->w / 2 - 10, bullets[i].y - playerBullet2->h / 2 - 20, playerBullet2->w, playerBullet2->h); //Adicionei
+                    masked_blit(playerBullet2, buffer, 0, 0, bullets[i].x - playerBullet2->w / 2 - 10, bullets[i].y - playerBullet2->h / 2 - 20, playerBullet2->w, playerBullet2->h); 
                }
                if(bullets[i].radius == 1){
-                    masked_blit(playerBullet3, buffer, 0, 0, bullets[i].x - playerBullet3->w / 2 - 10, bullets[i].y - playerBullet3->h / 2 - 20, playerBullet3->w, playerBullet3->h); //Adicionei
+                    masked_blit(playerBullet3, buffer, 0, 0, bullets[i].x - playerBullet3->w / 2 - 10, bullets[i].y - playerBullet3->h / 2 - 20, playerBullet3->w, playerBullet3->h); 
                }
            }
        }
    }
 }
 
+// NOVA FUNÇÃO: Permite criar padrões específicos (Leques, Círculos, Mirados)
+void shoot_custom_bullet(int x, int y, int vx, int vy) {
+   for (int i = 0; i < MAX_BULLETS; i++) {
+       if (!bullets[i].active) {
+           bullets[i].active = 1;
+           bullets[i].is_enemy_bullet = 1; // Sempre inimigo
+           bullets[i].x = x;
+           bullets[i].y = y;
+           bullets[i].radius = 2; // Pequena
+           bullets[i].speedx = vx;
+           bullets[i].speedy = vy;
+           bullets[i].damage = 1;
+           bullets[i].cooldown = 0;
+           break;
+       }
+   }
+}

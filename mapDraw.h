@@ -5,22 +5,16 @@
 #include "tree.h"
 #include <math.h>
 
-#define MAP_START_X  60
-#define MAP_END_X   (SCREEN_W - 60)
+#define MAP_START_X  20
+#define MAP_END_X    (SCREEN_W - 20)
 #define MAP_TOP_Y    40
 #define MAP_BOTTOM_Y (SCREEN_H - 40)
-#define MAP_LEVEL_GAP 60
 
-#define NODE_RADIUS_NORMAL 7
-#define NODE_RADIUS_BOSS 10
-#define NODE_RADIUS_EVENT 8
+#define NODE_RADIUS_NORMAL 6
+#define NODE_RADIUS_BOSS 9
+#define NODE_RADIUS_EVENT 7
 
-typedef struct {
-    int x;
-    int y;
-    int depth;
-} NodePosition;
-
+// Cores baseadas no tipo
 int node_color(NodeType type) {
     switch (type) {
         case NODE_NORMAL:   return makecol(100, 150, 255);
@@ -32,149 +26,70 @@ int node_color(NodeType type) {
     }
 }
 
-int get_node_radius(NodeType type) {
-    switch (type) {
-        case NODE_BOSS:     return NODE_RADIUS_BOSS;
-        case NODE_EVENT:    return NODE_RADIUS_EVENT;
-        default:            return NODE_RADIUS_NORMAL;
-    }
-}
-
 const char* get_node_label(NodeType type) {
     switch (type) {
-        case NODE_NORMAL:   return "E";
-        case NODE_MINIBOSS: return "M";
+        case NODE_NORMAL:   return "";
+        case NODE_MINIBOSS: return "!";
         case NODE_EVENT:    return "?";
         case NODE_STORE:    return "$";
         case NODE_BOSS:     return "B";
-        default:            return "?";
+        default:            return "";
     }
 }
 
-void draw_node(BITMAP* buffer, TreeNode* node, int x, int y) {
-    int radius = get_node_radius(node->type);
+void draw_single_node(BITMAP* buffer, TreeNode* node, int x, int y, int is_current) {
+    int radius = (node->type == NODE_BOSS) ? NODE_RADIUS_BOSS : NODE_RADIUS_NORMAL;
+    if (node->type == NODE_EVENT) radius = NODE_RADIUS_EVENT;
+
     int color = node_color(node->type);
     
+    if (is_current) {
+        circlefill(buffer, x, y, radius + 2, makecol(255, 255, 255));
+    }
+
     circlefill(buffer, x, y, radius, color);
-    circle(buffer, x, y, radius, makecol(0, 0, 0));
-    circle(buffer, x, y, radius - 1, makecol(255, 255, 255));
+    circle(buffer, x, y, radius, makecol(0, 0, 0)); 
     
-    textout_centre_ex(buffer, font, (char*)get_node_label(node->type), 
-                      x, y - 2, makecol(0, 0, 0), -1);
-}
-
-void calculate_node_positions(TreeNode* node, int depth, int max_depth, 
-                             int parent_x, int parent_y, NodePosition* positions, int* pos_count) {
-    if (!node) return;
-    
-    int y_pos = MAP_TOP_Y + (depth * (MAP_BOTTOM_Y - MAP_TOP_Y)) / (max_depth);
-    
-    int sibling_count = 1;
-    if (node->parent) {
-        sibling_count = node->parent->num_children;
-    }
-    
-    int child_index = 0;
-    if (node->parent) {
-        for (int i = 0; i < node->parent->num_children; i++) {
-            if (node->parent->children[i] == node) {
-                child_index = i;
-                break;
-            }
-        }
-    }
-    
-    int x_spread = MAP_END_X - MAP_START_X;
-    int x_offset = x_spread / (sibling_count + 1);
-    int x_pos = MAP_START_X + x_offset * (child_index + 1);
-    
-    positions[*pos_count].x = x_pos;
-    positions[*pos_count].y = y_pos;
-    positions[*pos_count].depth = depth;
-    (*pos_count)++;
-    
-    for (int i = 0; i < node->num_children; i++) {
-        if (node->children[i]) {
-            calculate_node_positions(node->children[i], depth + 1, max_depth, 
-                                   x_pos, y_pos, positions, pos_count);
-        }
+    const char* label = get_node_label(node->type);
+    if (label[0] != '\0') {
+        textout_centre_ex(buffer, font, (char*)label, x, y - 3, makecol(0, 0, 0), -1);
     }
 }
 
-void draw_connections_optimized(BITMAP* buffer, TreeNode* node, NodePosition* positions, int pos_count) {
+void draw_tree_recursive(BITMAP* buffer, TreeNode* node, int depth, int max_depth, 
+                        int min_x, int max_x, TreeNode* current_player_node, int selected_child_index) {
     if (!node) return;
-    
-    int node_x = -1, node_y = -1;
-    for (int i = 0; i < pos_count; i++) {
-        if (positions[i].depth >= 0) {
-            node_x = positions[i].x;
-            node_y = positions[i].y;
-            break;
-        }
-    }
-    
-    if (node_x == -1) return;
-    
-    for (int i = 0; i < node->num_children; i++) {
-        if (node->children[i]) {
-            int child_x = -1, child_y = -1;
-            for (int j = 0; j < pos_count; j++) {
-                if (positions[j].depth == positions[0].depth + 1) {
-                    child_x = positions[j].x;
-                    child_y = positions[j].y;
-                    break;
-                }
-            }
-            
-            if (child_x != -1) {
-                int mid_x = (node_x + child_x) / 2;
-                int mid_y = (node_y + child_y) / 2;
+
+    // Y invertido (de baixo pra cima)
+    int y_pos = MAP_BOTTOM_Y - (depth * (MAP_BOTTOM_Y - MAP_TOP_Y)) / (max_depth > 0 ? max_depth : 1);
+    int x_pos = (min_x + max_x) / 2;
+
+    int is_current = (node == current_player_node);
+
+    draw_single_node(buffer, node, x_pos, y_pos, is_current);
+
+    if (node->num_children > 0) {
+        int width_per_child = (max_x - min_x) / node->num_children;
+
+        for (int i = 0; i < node->num_children; i++) {
+            if (node->children[i]) {
+                int child_min_x = min_x + (i * width_per_child);
+                int child_max_x = child_min_x + width_per_child;
+                int child_x_center = (child_min_x + child_max_x) / 2;
                 
-                line(buffer, node_x, node_y, mid_x, mid_y, makecol(150, 150, 150));
-                line(buffer, mid_x, mid_y, child_x, child_y, makecol(150, 150, 150));
+                int child_y_pos = MAP_BOTTOM_Y - ((depth + 1) * (MAP_BOTTOM_Y - MAP_TOP_Y)) / max_depth;
+
+                // Lógica do Cursor Amarelo
+                if (is_current && i == selected_child_index) {
+                    line(buffer, x_pos, y_pos - 5, child_x_center, child_y_pos + 5, makecol(255, 255, 0));
+                    rect(buffer, child_x_center - 11, child_y_pos - 11, child_x_center + 11, child_y_pos + 11, makecol(255, 255, 0));
+                } else {
+                    line(buffer, x_pos, y_pos - 5, child_x_center, child_y_pos + 5, makecol(150, 150, 150));
+                }
+
+                draw_tree_recursive(buffer, node->children[i], depth + 1, max_depth, 
+                                  child_min_x, child_max_x, current_player_node, selected_child_index);
             }
-        }
-    }
-}
-
-void draw_connections_recursive(BITMAP* buffer, TreeNode* node, int depth, int max_depth, 
-                               int parent_x, int parent_y, int sibling_index, int sibling_count) {
-    if (!node) return;
-    
-    int y_pos = MAP_TOP_Y + (depth * (MAP_BOTTOM_Y - MAP_TOP_Y)) / (max_depth);
-    
-    int x_spread = MAP_END_X - MAP_START_X;
-    int x_offset = x_spread / (sibling_count + 1);
-    int x_pos = MAP_START_X + x_offset * (sibling_index + 1);
-    
-    if (depth > 0 && parent_x >= 0) {
-        line(buffer, parent_x, parent_y, x_pos, y_pos, makecol(120, 130, 150));
-    }
-    
-    for (int i = 0; i < node->num_children; i++) {
-        if (node->children[i]) {
-            draw_connections_recursive(buffer, node->children[i], depth + 1, max_depth, 
-                                      x_pos, y_pos, i, node->num_children);
-        }
-    }
-}
-
-void draw_nodes_recursive(BITMAP* buffer, TreeNode* node, int depth, int max_depth, 
-                         int parent_x, int parent_y, int sibling_index, int sibling_count) {
-    if (!node) return;
-    
-    int y_pos = MAP_TOP_Y + (depth * (MAP_BOTTOM_Y - MAP_TOP_Y)) / (max_depth);
-    
-    int x_spread = MAP_END_X - MAP_START_X;
-    int x_offset = x_spread / (sibling_count + 1);
-    int x_pos = MAP_START_X + x_offset * (sibling_index + 1);
-    
-    draw_node(buffer, node, x_pos, y_pos);
-    
-    for (int i = 0; i < node->num_children; i++) {
-        if (node->children[i]) {
-            draw_nodes_recursive(buffer, node->children[i], depth + 1, max_depth, 
-                                x_pos, y_pos, i, node->num_children);
         }
     }
 }
@@ -183,27 +98,26 @@ int get_max_depth(TreeNode* node) {
     if (!node) return 0;
     int max = 0;
     for (int i = 0; i < node->num_children; i++) {
-        int child_depth = get_max_depth(node->children[i]);
-        if (child_depth > max) max = child_depth;
+        int d = get_max_depth(node->children[i]);
+        if (d > max) max = d;
     }
     return max + 1;
 }
 
-void draw_map(BITMAP* buffer, TreeNode* root) {
+// Assinatura atualizada com 4 argumentos
+void draw_map(BITMAP* buffer, TreeNode* root, TreeNode* current_node, int selected_child_index) {
     if (!root) return;
     
     int max_depth = get_max_depth(root);
+    if (max_depth < 1) max_depth = 1;
+
+    rectfill(buffer, 10, 10, SCREEN_W-10, SCREEN_H-10, makecol(30, 35, 45));
+    rect(buffer, 10, 10, SCREEN_W-10, SCREEN_H-10, makecol(100, 120, 140));
     
-    rectfill(buffer, MAP_START_X - 20, MAP_TOP_Y - 20, 
-            MAP_END_X + 20, MAP_BOTTOM_Y + 20, makecol(30, 35, 45));
-    rect(buffer, MAP_START_X - 20, MAP_TOP_Y - 20, 
-        MAP_END_X + 20, MAP_BOTTOM_Y + 20, makecol(100, 120, 140));
-    
-    draw_connections_recursive(buffer, root, 0, max_depth, -1, -1, 0, 1);
-    draw_nodes_recursive(buffer, root, 0, max_depth, -1, -1, 0, 1);
-    
-    textout_ex(buffer, font, "FINAL BOSS", MAP_START_X - 10, MAP_TOP_Y - 15, 
-              makecol(255, 100, 200), -1);
+    textout_centre_ex(buffer, font, "- TACTICAL MAP -", SCREEN_W/2, 15, makecol(255, 255, 255), -1);
+    textout_centre_ex(buffer, font, "ARROWS: Select Path  |  ENTER: Deploy", SCREEN_W/2, SCREEN_H - 20, makecol(150, 150, 150), -1);
+
+    draw_tree_recursive(buffer, root, 0, max_depth - 1, 20, SCREEN_W - 20, current_node, selected_child_index);
 }
 
 #endif
