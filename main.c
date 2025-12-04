@@ -40,6 +40,7 @@ char* level_message = "";
 #include "mapDraw.h"
 #include "heart.h"
 #include "upgrades.h" 
+#include "partic~1.h"
 
 // Função auxiliar para carregar sprites
 BITMAP* load_bitmap_resized(const char* filename, int new_w, int new_h) {
@@ -137,7 +138,10 @@ int main(void) {
         // Reset do jogo
         player_health = 15; 
         player_x = 100; player_y = 100;
-        game_over = 0; init_bullets(); init_enemies();
+        game_over = 0; 
+        init_bullets(); 
+        init_enemies();
+        init_particles();
         
         // --- LOOP DO MENU PRINCIPAL ---
         while (!key[KEY_ENTER]) {
@@ -429,7 +433,7 @@ int main(void) {
                 
                 if (current_node->type != NODE_STORE) spawn_enemy(current_node->type);
                 
-                update_bullets(); update_enemies();
+                update_bullets(); update_enemies(); update_particles();
                 check_bullet_enemy_collisions(); check_player_bullet_collision(); check_player_enemy_collision();
 
                 if (player_invincible) { player_hit_timer--; if (player_hit_timer <= 0) player_invincible = false; }
@@ -437,6 +441,7 @@ int main(void) {
 
                 draw_bullets(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
                 draw_enemies(buffer, enemy_bmp, boss_bmp);
+                draw_particles(buffer);
 
                 rectfill(buffer, 0, 0, SCREEN_WIDTH / 4, SCREEN_HEIGHT, makecol(59, 68, 75));
                 rectfill(buffer, (SCREEN_WIDTH * 3) / 4, 0, SCREEN_WIDTH, SCREEN_HEIGHT, makecol(59, 68, 75));
