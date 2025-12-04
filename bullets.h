@@ -1,5 +1,8 @@
 #include "fila.h"
 
+// Extern declaration for delta time (defined in main.c)
+extern double delta_time;
+
 typedef struct {
    int x, y;
    int active;
@@ -313,15 +316,15 @@ void update_bullets() {
    check_auto_reload();
 
    if (bullet_cooldown > 0) {
-       bullet_cooldown--;
+       bullet_cooldown -= delta_time * 60.0;  // Convert delta_time to frame-like units
    }
   
    for (int i = 0; i < MAX_BULLETS; i++) {
        if (bullets[i].active) {
            if (bullets[i].is_enemy_bullet) {
-               bullets[i].x += bullets[i].speedx;
+               bullets[i].x += (int)(bullets[i].speedx * delta_time * 60.0);
                if (bullets[i].x > SCREEN_WIDTH) bullets[i].active = 0;
-               bullets[i].y += bullets[i].speedy;
+               bullets[i].y += (int)(bullets[i].speedy * delta_time * 60.0);
                if (bullets[i].y > SCREEN_HEIGHT) bullets[i].active = 0;
            }
            else {
