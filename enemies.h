@@ -64,8 +64,8 @@ void spawn_enemy(int node_type) {
                enemies[0].x = SCREEN_WIDTH / 2;
                enemies[0].y = 50;
                enemies[0].is_boss = 1;
-               enemies[0].health = 80;  
-               enemies[0].max_health = 80;
+               enemies[0].health = 200;  
+               enemies[0].max_health = 200;
                enemies[0].shoot_cooldown = 60;
                enemies[0].vx = 2; 
                enemies[0].radius = 25; 
@@ -91,7 +91,7 @@ void spawn_enemy(int node_type) {
                if (random_x + 16 > (SCREEN_WIDTH * 3 / 4) - (SCREEN_WIDTH / 4)) random_x -= 16;
 
                enemies[i].x = random_x;
-               enemies[i].y = -20;  
+               enemies[i].y = -15;  
                enemies[i].active = 1;
                enemies[i].is_boss = 0;
                enemies[i].vx = 0;
@@ -115,104 +115,288 @@ void update_enemies() {
                
                // FASE 3: PERSEGUIÇÃO + CAOS (HP < 30%)
                if (hp_percent < 0.3) {
+               
+                   // 1. Limpeza de Estados da Fase 2 (Segurança)
+                   if (enemies[i].laser_active >= 1 && enemies[i].laser_active <= 3) {
+                       enemies[i].laser_width = 0; 
+                       enemies[i].laser_active = 0;
+                       enemies[i].attack_alternator = 0; 
+                   }
+               
+                   // 2. Movimentação de Perseguição (Chasing)
+                   // Só persegue se não estiver disparando o laser fatal (estado 11)
                    if (enemies[i].laser_active != 11) {
                        int target_x = player_x;
-                       int target_y = player_y - 80;
+                       int target_y = player_y - 80; // Tenta ficar acima do player
+                       
                        if (enemies[i].x < target_x) enemies[i].x += 2; else enemies[i].x -= 2;
+                       
                        if (enemies[i].y < target_y && enemies[i].y < SCREEN_HEIGHT - 100) enemies[i].y += 1;
                        else if (enemies[i].y > target_y) enemies[i].y -= 1;
                    }
-
+               
+                   // 3. Máquina de Estados de Ataque
+                   
+                   // ESTADO: PREPARANDO LASER (Aviso visual)
                    if (enemies[i].laser_active == 10) { 
                        enemies[i].laser_timer--;
-                       if (enemies[i].laser_timer <= 0) { enemies[i].laser_active = 11; enemies[i].laser_timer = 60; enemies[i].laser_width = 2; }
+                       if (enemies[i].laser_timer <= 0) { 
+                           enemies[i].laser_active = 11; 
+                           enemies[i].laser_timer = 60; // Duração do laser ativo
+                           enemies[i].laser_width = 2; 
+                       }
                    }
+                   // ESTADO: DISPARANDO LASER (Dano real em cruz)
                    else if (enemies[i].laser_active == 11) { 
-                       if (enemies[i].laser_width < 25) enemies[i].laser_width += 3;
+                       if (enemies[i].laser_width < 25) enemies[i].laser_width += 3; // Expande o laser
                        enemies[i].laser_timer--;
-                       if (enemies[i].laser_timer <= 0) { enemies[i].laser_active = 0; enemies[i].shoot_cooldown = 40; enemies[i].attack_alternator = 0; }
+                       
+                       if (enemies[i].laser_timer <= 0) { 
+                           enemies[i].laser_active = 0; 
+                           enemies[i].shoot_cooldown = 40; // Descanso após laser
+                           enemies[i].attack_alternator = 0; // Volta para a Espiral
+                       }
                    }
+                   // ESTADO: COOLDOWN OU ESPIRAL
                    else {
                        if (enemies[i].shoot_cooldown > 0) enemies[i].shoot_cooldown--;
                        else {
+                           // --- ATAQUE 1: ESPIRAL DA MORTE ---
                            if (enemies[i].attack_alternator == 0) {
-                               shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, 0, 4);
-                               shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, 0, -4);
-                               shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, 4, 0);
-                               shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, -4, 0);
-                               shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, 3, 3);
-                               shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, -3, 3);
-                               shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, 3, -3);
-                               shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, -3, -3);
-                               enemies[i].shoot_cooldown = 40;
-                               enemies[i].attack_alternator = 1; 
-                           } else {
-                               enemies[i].laser_active = 10; enemies[i].laser_timer = 45; 
+                               
+                               // Variáveis estáticas para manter o estado entre frames
+                               static float spiral_angle = 0;
+                               static int spiral_shots = 0;
+               
+                               // Dispara 3 balas em pontas de triângulo (120 graus cada)
+                               for (int k = 0; k < 3; k++) {
+                                   // 2.0944 radianos = 120 graus
+                                   float angle = spiral_angle + (k * 2.0944); 
+                                   
+                                   int vx = (int)(cos(angle) * 5); // Velocidade 5
+                                   int vy = (int)(sin(angle) * 5);
+                                   
+                                   shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, vx, vy);
+                               }
+               
+                               // Gira o ângulo para o próximo frame
+                               spiral_angle += 0.2; 
+                               
+                               // Incrementa contador
+                               spiral_shots++;
+               
+                               // Cooldown curtíssimo para criar o efeito de "cobra" contínua
+                               enemies[i].shoot_cooldown = 5;
+               
+                               // Se já atirou muito (aprox 3 segundos), troca para o Laser
+                               if (spiral_shots > 40) {
+                                   enemies[i].attack_alternator = 1; // Vai pro Laser
+                                   enemies[i].shoot_cooldown = 60;   // Pausa dramática antes do laser
+                                   enemies[i].laser_active = 10;     // Já inicia o aviso do laser
+                                   enemies[i].laser_timer = 45;      
+                                   spiral_shots = 0;                 // Reseta contador
+                               }
+                           } 
+                           // --- ATAQUE 2: Iniciar Laser (Fallthrough) ---
+                           else {
+                               // Caso caia aqui por segurança, joga pro laser
+                               enemies[i].laser_active = 10; 
+                               enemies[i].laser_timer = 45; 
                            }
                        }
                    }
                }
-               // FASE 2: VARREDURA PING-PONG (HP < 60%)
-               else if (hp_percent < 0.6) {
-                   if (enemies[i].laser_active == 0) { enemies[i].laser_active = 1; }
-                   else if (enemies[i].laser_active == 1) { 
-                       int target_x = (enemies[i].attack_alternator == 0) ? 40 : SCREEN_WIDTH - 40;
-                       if (enemies[i].x > target_x) enemies[i].x -= 4; else enemies[i].x += 4;
-                       if (abs(enemies[i].x - target_x) < 5) { enemies[i].x = target_x; enemies[i].laser_active = 2; enemies[i].laser_timer = 60; }
+               // FASE 2: VARREDURA(HP < 60%)
+               else if (hp_percent < 0.6){
+                   // ESTADO 0: DECISÃO
+                   if (enemies[i].laser_active == 0) {
+                       // Sorteia qual ataque usar (50/50)
+                       if (rand() % 2 == 0) {
+                           enemies[i].laser_active = 1; // Vai para o Laser Sweep
+                       } else {
+                           enemies[i].laser_active = 4; // Vai para o Dash Horizontal
+                       }
                    }
+                
+                   // =========================================================
+                   // ATAQUE A: VARREDURA PING-PONG (Original)
+                   // =========================================================
+                   
+                   // Estado 1: Indo para o canto
+                   else if (enemies[i].laser_active == 1) { 
+                       // Define o lado baseado no alternador (para variar esq/dir)
+                       int target_x = (enemies[i].attack_alternator == 0) ? 40 : SCREEN_WIDTH - 40;
+                       
+                       if (enemies[i].x > target_x) enemies[i].x -= 4; else enemies[i].x += 4;
+                       
+                       if (abs(enemies[i].x - target_x) < 5) { 
+                           enemies[i].x = target_x; 
+                           enemies[i].laser_active = 2; 
+                           enemies[i].laser_timer = 60; 
+                       }
+                   }
+                   // Estado 2: Carregando Laser
                    else if (enemies[i].laser_active == 2) { 
                        enemies[i].laser_timer--;
                        if (enemies[i].laser_timer <= 0) { enemies[i].laser_active = 3; enemies[i].laser_width = 2; }
                    }
+                   // Estado 3: Disparando e Varrendo
                    else if (enemies[i].laser_active == 3) { 
                        if (enemies[i].laser_width < 30) enemies[i].laser_width += 2;
+                       
                        if (enemies[i].attack_alternator == 0) { // Esq -> Dir
                            enemies[i].x += 2;
-                           if (enemies[i].x >= (SCREEN_WIDTH / 2)) { // Para no meio
-                               enemies[i].laser_active = 0; enemies[i].shoot_cooldown = 90; enemies[i].attack_alternator = 1;
+                           if (enemies[i].x >= (SCREEN_WIDTH / 2)) { 
+                               enemies[i].laser_active = 0; enemies[i].shoot_cooldown = 60; enemies[i].attack_alternator = 1;
                            }
                        } else { // Dir -> Esq
                            enemies[i].x -= 2;
-                           if (enemies[i].x <= (SCREEN_WIDTH / 2)) { // Para no meio
-                               enemies[i].laser_active = 0; enemies[i].shoot_cooldown = 90; enemies[i].attack_alternator = 0;
+                           if (enemies[i].x <= (SCREEN_WIDTH / 2)) { 
+                               enemies[i].laser_active = 0; enemies[i].shoot_cooldown = 60; enemies[i].attack_alternator = 0;
                            }
                        }
                    }
-               }
-               // FASE 1: BARRAGEM MIRADA
-               else {
-                   enemies[i].laser_active = 0;
-                   int center_x = SCREEN_WIDTH / 2;
-                   if(enemies[i].x < center_x - 2) enemies[i].x += 2;
-                   else if(enemies[i].x > center_x + 2) enemies[i].x -= 2;
-
-                   if (enemies[i].shoot_cooldown > 0) { enemies[i].shoot_cooldown--; } 
-                   else {
-                       float dx = player_x - enemies[i].x;
-                       float dy = player_y - (enemies[i].y + 20);
-                       float base_angle = atan2(dy, dx);
-                       float speed = 4.0; float spread = 0.25;
-
-                       for (int k = -3; k <= 3; k++) {
-                           float angle = base_angle + (k * spread);
-                           int vx = (int)(cos(angle) * speed);
-                           int vy = (int)(sin(angle) * speed);
-                           shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, vx, vy);
-                       }
-                       enemies[i].shoot_cooldown = 60; 
+                
+                   // =========================================================
+                   // ATAQUE B: DASH HORIZONTAL RÁPIDO (Novo)
+                   // =========================================================
+                   
+                   // Estado 4: Preparação (Teleporte)
+                   else if (enemies[i].laser_active == 4) {
+                       // Escolhe lado: 0 = Vem da Esquerda, 1 = Vem da Direita
+                       int side = rand() % 2;
+                       enemies[i].attack_alternator = side; 
+                
+                       // Alinha Y com o jogador (mira na sua altura)
+                       enemies[i].y = player_y;
+                       
+                       // Teleporta para fora da tela
+                       if (side == 0) enemies[i].x = -60;
+                       else enemies[i].x = SCREEN_WIDTH + 60;
+                
+                       enemies[i].laser_active = 5; // Vai para Aviso
+                       enemies[i].laser_timer = 45; // Tempo do aviso (linha vermelha)
                    }
-               }
+                   // Estado 5: Aviso Visual
+                   else if (enemies[i].laser_active == 5) {
+                       enemies[i].laser_timer--;
+                       
+                       // Segue levemente o Y do player (Tracking suave) para não ser injusto
+                       if (enemies[i].y < player_y) enemies[i].y += 1;
+                       else if (enemies[i].y > player_y) enemies[i].y -= 1;
+                
+                       if (enemies[i].laser_timer <= 0) enemies[i].laser_active = 6;
+                   }
+                   // Estado 6: O Dash (Execução)
+                   else if (enemies[i].laser_active == 6) {
+                       int speed = 15; // Velocidade bem alta
+                
+                       if (enemies[i].attack_alternator == 0) enemies[i].x += speed; // Esq -> Dir
+                       else enemies[i].x -= speed; // Dir -> Esq
+                
+                       // Se saiu da tela, acabou
+                       if (enemies[i].x > SCREEN_WIDTH + 100 || enemies[i].x < -100) {
+                           enemies[i].laser_active = 0; // Volta para decisão
+                           enemies[i].shoot_cooldown = 40; // Pausa para respirar
+                       }
+                   }
+                }
+               // FASE 1
+               else{
+                   // 1. Limpeza de segurança
+    // 1. Limpeza de segurança
+    if(enemies[i].laser_active != 0) { 
+        enemies[i].laser_active = 0; enemies[i].laser_width = 0; 
+    }
+
+    // 2. Movimentação: PÊNDULO (Vai e Vem)
+    // Se attack_alternator for 0, vai pra Direita. Se for 1, vai pra Esquerda.
+    int speed = 3;
+    
+    if (enemies[i].attack_alternator == 0) {
+        enemies[i].x += speed;
+        if (enemies[i].x > SCREEN_WIDTH - 40) enemies[i].attack_alternator = 1; // Bateu na parede dir
+    } else {
+        enemies[i].x -= speed;
+        if (enemies[i].x < 40) enemies[i].attack_alternator = 0; // Bateu na parede esq
+    }
+
+    // Mantém altura fixa
+    int target_y = 40;
+    if (enemies[i].y < target_y) enemies[i].y += 2;
+    else if (enemies[i].y > target_y) enemies[i].y -= 2;
+
+    // 3. Lógica de Tiro: TAPETE DE BOMBAS
+    if (enemies[i].shoot_cooldown > 0) { 
+        enemies[i].shoot_cooldown--; 
+    } 
+    else {
+        // Dispara 3 balas em leque PARA BAIXO, aproveitando o movimento
+        // Bala 1: Cai reta
+        shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, 0, 5);
+        
+        // Bala 2: Cai um pouco pra esquerda (Previsão)
+        shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, -2, 4);
+        
+        // Bala 3: Cai um pouco pra direita
+        shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, 2, 4);
+
+        // Cooldown ajustado para o movimento
+        enemies[i].shoot_cooldown = 15; 
+    }
+                }
            } 
            // IA NORMAL
            else {
-               enemies[i].y += 2;
-               if(rand()%10 < 3) { if(rand()%2) enemies[i].x++; else enemies[i].x--; }
-               if (enemies[i].shoot_cooldown > 0) enemies[i].shoot_cooldown--;
-               else {
-                   shoot_bullet(enemies[i].x, enemies[i].y + ENEMY_RADIUS, 1);
-                   enemies[i].shoot_cooldown = ENEMY_SHOOT_COOLDOWN + (rand() % 30);
+                // TIPO 1: HEAVY UNITS (Perseguidores Lentos) - HP >= 6
+               if (enemies[i].max_health == 6) {
+                   // ... (Código dos Heavy Units que já fizemos antes: perseguem e atiram mirado) ...
+                   // (Mantenha o código do passo anterior aqui)
+                   if (enemies[i].x < player_x) enemies[i].x += 1;
+                   else if (enemies[i].x > player_x) enemies[i].x -= 1;
+                   if (enemies[i].y < player_y) enemies[i].y += 1;
+                   else if (enemies[i].y > player_y) enemies[i].y -= 1;
+                   
+                   if (enemies[i].shoot_cooldown > 0) enemies[i].shoot_cooldown--;
+                   else {
+                       float dx = player_x - enemies[i].x; float dy = player_y - enemies[i].y;
+                       float angle = atan2(dy, dx);
+                       int vx = (int)(cos(angle) * 3.0); int vy = (int)(sin(angle) * 3.0);
+                       shoot_custom_bullet(enemies[i].x, enemies[i].y, vx, vy);
+                       enemies[i].shoot_cooldown = ENEMY_SHOOT_COOLDOWN + 20;
+                   }
                }
-               if (enemies[i].y > SCREEN_HEIGHT + 20) enemies[i].active = 0;
+               
+               // TIPO 2: SWARM/EVENTO (Kamikazes Rápidos) - HP == 1 (NOVO!)
+               else if (enemies[i].max_health == 1) {
+                   // 1. Velocidade Alta: Caem muito mais rápido que o normal
+                   enemies[i].y += 5; // Normal é 2
+                   
+                   // 2. Movimento Lateral Errático (Tremida)
+                   // Isso dificulta prever exatamente onde ele vai cair
+                   int jitter = (rand() % 3) - 1; // -1, 0, ou 1
+                   enemies[i].x += jitter;
+
+                   // 3. SEM TIROS
+                   // Note que não tem nenhum código de "shoot_bullet" aqui.
+                   // O perigo é apenas a colisão.
+
+                   // Despawn ao sair da tela
+                   if (enemies[i].y > SCREEN_HEIGHT + 20) enemies[i].active = 0;
+               }
+
+               // TIPO 3: INIMIGOS NORMAIS (Padrão) - HP entre 2 e 5
+               else {
+                   enemies[i].y += 2;
+                   if(rand()%10 < 3) { if(rand()%2) enemies[i].x++; else enemies[i].x--; }
+                   
+                   if (enemies[i].shoot_cooldown > 0) enemies[i].shoot_cooldown--;
+                   else {
+                       shoot_bullet(enemies[i].x, enemies[i].y + ENEMY_RADIUS, 1);
+                       enemies[i].shoot_cooldown = ENEMY_SHOOT_COOLDOWN + (rand() % 30);
+                   }
+                   if (enemies[i].y > SCREEN_HEIGHT + 20) enemies[i].active = 0;
+               }
            }
        }
    }
@@ -231,69 +415,124 @@ void check_boss_death() {
 void draw_enemies(BITMAP* buffer, BITMAP* enemy_bmp, BITMAP* boss_bmp) {
    for (int i = 0; i < MAX_ENEMIES; i++) {
        if (enemies[i].active) {
+           // ============================================================
+           // LÓGICA DE DESENHO DO BOSS
+           // ============================================================
            if (enemies[i].is_boss) {
                
-               // ... (Lógica de desenho dos Lasers - MANTIDA IGUAL) ...
-               // (Copie a parte dos lasers do seu código anterior se precisar, 
-               //  ou use o bloco abaixo se quiser garantir que está atualizado)
-               int lx = enemies[i].x; int ly = enemies[i].y + 20;
-               if (enemies[i].laser_active == 2) {
-                   if ((enemies[i].laser_timer / 4) % 2 == 0) line(buffer, lx, ly, lx, SCREEN_HEIGHT, makecol(255, 0, 0));
-               } else if (enemies[i].laser_active == 3) {
-                   int w = enemies[i].laser_width;
-                   rectfill(buffer, lx - w/2, ly, lx + w/2, SCREEN_HEIGHT, makecol(255, 255, 255));
-                   rect(buffer, lx - w/2, ly, lx + w/2, SCREEN_HEIGHT, makecol(100, 200, 255));
-               } else if (enemies[i].laser_active == 10) {
-                   if ((enemies[i].laser_timer / 4) % 2 == 0) {
-                       line(buffer, lx, ly, lx, SCREEN_HEIGHT, makecol(255, 0, 0));
-                       line(buffer, 0, ly, SCREEN_WIDTH, ly, makecol(255, 0, 0));
+               int lx = enemies[i].x; 
+               int ly = enemies[i].y + 20;
+
+               // --- FASE 2: AVISO DO DASH HORIZONTAL (Estado 5) ---
+               if (enemies[i].laser_active == 5) {
+                   if ((enemies[i].laser_timer / 4) % 2 == 0) { // Piscar
+                       int color = makecol(255, 100, 0); // Laranja
+                       
+                       // Linha de trajeto
+                       rectfill(buffer, 0, enemies[i].y - 2, SCREEN_WIDTH, enemies[i].y + 2, color);
+                       
+                       // Ícone de Perigo "!" no lado de origem
+                       int symbol_x = (enemies[i].attack_alternator == 0) ? 20 : SCREEN_WIDTH - 20;
+                       circlefill(buffer, symbol_x, enemies[i].y, 10, color);
+                       textout_centre_ex(buffer, font, "!", symbol_x, enemies[i].y - 4, makecol(255,255,255), -1);
                    }
-               } else if (enemies[i].laser_active == 11) {
+               }
+
+               // --- FASE 2: LASER VERTICAL (Varredura) ---
+               // Carregando (Linha fina)
+               else if (enemies[i].laser_active == 2) {
+                   if ((enemies[i].laser_timer / 4) % 2 == 0) 
+                       line(buffer, lx, ly, lx, SCREEN_HEIGHT, makecol(255, 0, 0));
+               } 
+               // Atirando (Feixe Grosso)
+               else if (enemies[i].laser_active == 3) {
                    int w = enemies[i].laser_width;
+                   rectfill(buffer, lx - w/2, ly, lx + w/2, SCREEN_HEIGHT, makecol(255, 255, 255)); // Miolo Branco
+                   rect(buffer, lx - w/2, ly, lx + w/2, SCREEN_HEIGHT, makecol(100, 200, 255));      // Borda Azul
+               } 
+
+               // --- FASE 3: LASER EM CRUZ (Caos) ---
+               // Aviso (Linhas finas)
+               else if (enemies[i].laser_active == 10) {
+                   if ((enemies[i].laser_timer / 4) % 2 == 0) {
+                       line(buffer, lx, ly, lx, SCREEN_HEIGHT, makecol(255, 0, 0)); // Vertical
+                       line(buffer, 0, ly, SCREEN_WIDTH, ly, makecol(255, 0, 0));   // Horizontal
+                   }
+               } 
+               // Atirando (Feixes Grossos)
+               else if (enemies[i].laser_active == 11) {
+                   int w = enemies[i].laser_width;
+                   // Vertical
                    rectfill(buffer, lx - w/2, ly, lx + w/2, SCREEN_HEIGHT, makecol(255, 200, 255));
+                   // Horizontal
                    rectfill(buffer, 0, ly - w/2, SCREEN_WIDTH, ly + w/2, makecol(255, 200, 255));
+                   // Centro (Explosão)
                    circlefill(buffer, lx, ly, w, makecol(255, 255, 255));
                }
 
-               // Sprite do Boss
-               masked_blit(boss_bmp, buffer, 0, 0, enemies[i].x - boss_bmp->w/2, enemies[i].y - boss_bmp->h/2, boss_bmp->w, boss_bmp->h);
+               // --- SPRITE DO BOSS ---
+               // Só desenha se estiver numa coordenada "visível" ou próxima da tela
+               // Isso evita tentar desenhar na coordenada -60 ou +400 durante o teleporte do Dash
+               if (enemies[i].x > -100 && enemies[i].x < SCREEN_WIDTH + 100) {
+                   masked_blit(boss_bmp, buffer, 0, 0, enemies[i].x - boss_bmp->w/2, enemies[i].y - boss_bmp->h/2, boss_bmp->w, boss_bmp->h);
+               }
                
-               // --- BARRA DE VIDA & NOME ---
+               // --- HUD DO BOSS (Barra de Vida e Nome) ---
                int bar_w = 150;
-               int current_w = (enemies[i].health * bar_w) / enemies[i].max_health;
-               int bar_color = makecol(0,255,0); 
-               float pct = (float)enemies[i].health / enemies[i].max_health;
-               if(pct < 0.6) bar_color = makecol(255,255,0); 
-               if(pct < 0.3) bar_color = makecol(255,0,0);   
+               // Proteção matemática para a barra não desenhar invertida se HP < 0
+               int safe_health = (enemies[i].health < 0) ? 0 : enemies[i].health;
+               int current_w = (safe_health * bar_w) / enemies[i].max_health;
                
-               // Desenha a barra (Y: 20 até 25)
+               int bar_color = makecol(0,255,0); // Verde
+               float pct = (float)enemies[i].health / enemies[i].max_health;
+               if(pct < 0.6) bar_color = makecol(255,255,0); // Amarelo
+               if(pct < 0.3) bar_color = makecol(255,0,0);   // Vermelho
+               
+               // Desenha Fundo Cinza
                rectfill(buffer, SCREEN_WIDTH/2 - bar_w/2, 20, SCREEN_WIDTH/2 + bar_w/2, 25, makecol(50,50,50));
+               // Desenha Vida Atual
                rectfill(buffer, SCREEN_WIDTH/2 - bar_w/2, 20, SCREEN_WIDTH/2 - bar_w/2 + current_w, 25, bar_color);
+               // Desenha Borda Branca
                rect(buffer, SCREEN_WIDTH/2 - bar_w/2, 20, SCREEN_WIDTH/2 + bar_w/2, 25, makecol(255,255,255));
                
-               // MUDANÇA AQUI: Nome "Catchulo" EMBAIXO da barra (Y = 28)
                textout_centre_ex(buffer, font, "Catchulo", SCREEN_WIDTH/2, 28, bar_color, -1);
-
-           } else {
-               // ... (Código dos inimigos normais mantido igual) ...
+           } 
+           
+           // ============================================================
+           // LÓGICA DE DESENHO DOS INIMIGOS COMUNS
+           // ============================================================
+           else {
                masked_blit(enemy_bmp, buffer, 0, 0, enemies[i].x - enemy_bmp->w / 2, enemies[i].y - enemy_bmp->h / 2, enemy_bmp->w, enemy_bmp->h);
+               
+               // Heavy Units / Minibosses (Barra segmentada grande)
                if (enemies[i].max_health > 3) {
                    int block = 4; int gap = 1;
                    int total = (enemies[i].health * block) + ((enemies[i].health - 1) * gap);
                    int sx = enemies[i].x - (total / 2); int sy = enemies[i].y - enemies[i].radius - 8;
+                   
                    for(int h = 0; h < enemies[i].health; h++) {
                        int bx = sx + h * (block + gap);
                        int color = makecol(0, 255, 0); 
                        if(enemies[i].health <= enemies[i].max_health / 2) color = makecol(255, 255, 0);
                        if(enemies[i].health <= 2) color = makecol(255, 0, 0);
+                       
                        rectfill(buffer, bx, sy, bx + block, sy + 3, color);
-                       rect(buffer, bx, sy, bx + block, sy + 3, makecol(0,0,0));
+                       rect(buffer, bx, sy, bx + block, sy + 3, makecol(0,0,0)); // Contorno preto
                    }
-               } else {
-                   int bw = 16; int cur = (enemies[i].health * bw) / enemies[i].max_health;
+               } 
+               // Inimigos Fracos (Barra fina simples)
+               else {
+                   int bw = 16; 
+                   // Proteção para vida negativa
+                   int safe_hp = (enemies[i].health < 0) ? 0 : enemies[i].health;
+                   int cur = (safe_hp * bw) / enemies[i].max_health;
+                   
                    int sx = enemies[i].x - (bw / 2); int sy = enemies[i].y - enemies[i].radius - 6;
+                   
                    rectfill(buffer, sx, sy, sx + bw, sy + 2, makecol(50,50,50));
-                   int color = makecol(0, 255, 0); if (enemies[i].health == 1) color = makecol(255, 0, 0);
+                   int color = makecol(0, 255, 0); 
+                   if (enemies[i].health == 1) color = makecol(255, 0, 0);
+                   
                    rectfill(buffer, sx, sy, sx + cur, sy + 2, color);
                }
            }

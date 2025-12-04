@@ -8,7 +8,7 @@
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 200
 #define PLAYER_RADIUS 5
-#define MAX_BULLETS 10
+#define MAX_BULLETS 200
 #define MAX_ENEMIES 5
 #define ENEMY_SHOOT_COOLDOWN 90
 #define PLAYER_INVINCIBILITY_TIME 60
@@ -65,8 +65,10 @@ void configure_level(NodeType type) {
             level_message = "MISSION: DESTROY 5 HEAVY UNITS"; break;
         case NODE_EVENT:
             current_bg_color = makecol(0, 0, 40);
-            global_enemy_hp = 1; global_spawn_rate = 15; level_kill_target = 30; 
-            level_message = "SWARM: KILL 30 ENEMIES"; break;
+            global_enemy_hp = 1; global_spawn_rate = 15; level_kill_target = 30;
+            global_spawn_rate = 8;
+            level_kill_target = 50;
+            level_message = "SURVIVE THE SWARM"; break;
         case NODE_STORE:
             current_bg_color = makecol(0, 40, 0); 
             global_enemy_hp = 0; global_spawn_rate = 9999; level_kill_target = 0; 
@@ -129,16 +131,25 @@ int main(void) {
     if (!playerBullet1) { allegro_message("Erro: bullet bitmaps"); return 1; }
 
     bool exit_program = false;
+    int debug_boss_mode = 0;
 
     while (!exit_program) {
         // Reset do jogo
-        player_health = 5; 
+        player_health = 15; 
         player_x = 100; player_y = 100;
         game_over = 0; init_bullets(); init_enemies();
         
         // --- LOOP DO MENU PRINCIPAL ---
         while (!key[KEY_ENTER]) {
             draw_menu(buffer);
+
+            // ATALHO SECRETO: Pressione 'B' para Boss Rush
+            if (key[KEY_B]) { 
+                debug_boss_mode = 1; 
+                exit_program = false; 
+                break;
+            }
+
             if (key[KEY_ESC]) { exit_program = true; break; }
             blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); rest(16);
         }
@@ -190,7 +201,26 @@ int main(void) {
         }
         // =================================================================
 
-        TreeNode *campaign_map = generate_map(5);
+        TreeNode *campaign_map;
+
+        if (debug_boss_mode) {
+            // MODO DEBUG: Cria um mapa minúsculo: [Inicio] -> [BOSS]
+            TreeNode* root = create_node(0, NODE_NORMAL);
+            TreeNode* boss = create_node(1, NODE_BOSS);
+            TreeNode* children[1] = {boss};
+            
+            connect_nodes(root, children, 1);
+            campaign_map = root;
+            
+            // Dá upgrades para você não chegar pelado no boss
+            addshootingspeed(50);
+            adddmg(50);
+            addmagsize(10);
+        } else {
+            // MODO NORMAL
+            campaign_map = generate_map(5);
+        }
+
         TreeNode *current_node = campaign_map;
         
         int selected_child_index = 0; int input_delay = 0;
@@ -257,8 +287,7 @@ int main(void) {
                     // Opção 4: CURAR
                     if (key[KEY_4] && menu_cooldown <= 0) { 
                         if (player_health < 5) { 
-                            player_health += 1; 
-                            if(player_health > 5) player_health = 5;
+                            player_health += 5; 
                         }
                         while(key[KEY_4]) { rest(10); } 
                         break; 
@@ -365,6 +394,38 @@ int main(void) {
                 if (key[KEY_RIGHT] && player_x + PLAYER_RADIUS < (SCREEN_WIDTH * 3) / 4) player_x += 4;
                 if (key[KEY_SPACE] && bullet_cooldown <= 0) shoot_bullet(player_x, player_y + 5, 0);
                 if (key[KEY_ESC]) { campaign_running = false; level_running = false; }
+
+                // --- CHEATS DE DESENVOLVEDOR ---
+                //if (current_node->type == NODE_BOSS && boss_spawned) {
+                    
+                // F1: Reseta para Fase 1 (100% Vida)
+                if (key[KEY_F1]) { 
+                    enemies[0].health = enemies[0].max_health; 
+                    rest(100); // Pausa para não registrar múltiplo clique
+                }
+                
+                // F2: Pula para Fase 2 (55% Vida)
+                if (key[KEY_F2]) { 
+                    enemies[0].health = (int)(enemies[0].max_health * 0.55); 
+                    rest(100);
+                }
+
+                // F3: Pula para Fase 3 (25% Vida)
+                if (key[KEY_F3]) { 
+                    enemies[0].health = (int)(enemies[0].max_health * 0.25); 
+                    rest(100);
+                }
+
+                // K: Mata o Boss (Kill)
+                if (key[KEY_K]) { 
+                    enemies[0].health = 0; 
+                }
+                //}
+                
+                // I: Imortalidade (Toggle)
+                if (key[KEY_I]) {
+                    player_health = 999;
+                }
                 
                 if (current_node->type != NODE_STORE) spawn_enemy(current_node->type);
                 

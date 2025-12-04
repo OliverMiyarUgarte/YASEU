@@ -64,27 +64,27 @@ void init_bullets() {
    Cria(&pbullets[0]);
    Cria(&pbullets[1]);
 
-   //setup bullet types (ORIGINAIS)
-   // Tipo 0
+   //setup bullet types
+   // Tipo 0 (médio)
    btypes[0].speedx = 0; 
    btypes[0].speedy = 4; 
-   btypes[0].radius = 3; // Restaurado para 3
+   btypes[0].radius = 3; 
    btypes[0].cooldown = 5;
    btypes[0].damage = 1;
    btypes[0].spread = 1;
 
-   // Tipo 1
+   // Tipo 1 (grande)
    btypes[1].speedx = 0; 
    btypes[1].speedy = 2; 
-   btypes[1].radius = 5; // Restaurado para 5
+   btypes[1].radius = 5; 
    btypes[1].cooldown = 10;
    btypes[1].damage = 2;
    btypes[1].spread = 0;
 
-   // Tipo 2
+   // Tipo 2 (pequeno)
    btypes[2].speedx = 0;
    btypes[2].speedy = 7; 
-   btypes[2].radius = 1; // Mantido 1
+   btypes[2].radius = 1; 
    btypes[2].cooldown = 2; 
    btypes[2].damage = 1;
    btypes[2].spread = 3;
@@ -128,57 +128,84 @@ int deselectbullet() {
     return bullet;
 }
 
+// 1. Nova função para verificar recarga automaticamente
+void check_auto_reload() {
+    // Se a fila ativa está vazia...
+    if (Vazia(&pbullets[ativa])) {
+        
+        // ...e a fila de reserva TEM balas (significa que temos munição para recarregar)
+        if (!Vazia(&pbullets[1 - ativa])) {
+            
+            // Troca o pente (Swap)
+            ativa = 1 - ativa; 
+            
+            // Aplica o tempo de recarga (Cooldown Longo)
+            bullet_cooldown = (Nelementos(&pbullets[ativa]) * 10 - BulletCooldownReduction);
+            
+            // Segurança para o cooldown não ficar negativo ou zero instantâneo
+            if (bullet_cooldown < 5) bullet_cooldown = 5;
+        }
+    }
+}
 
 
 void shoot_bullet(int x, int y, int is_enemy_bullet) {
+   // Se for player e estiver em cooldown, não faz nada
    if (is_enemy_bullet == 0 && bullet_cooldown > 0) {
+       return;
+   }
+   
+   // Se for player e não tiver bala em NENHUMA fila, não atira
+   if (is_enemy_bullet == 0 && Vazia(&pbullets[ativa]) && Vazia(&pbullets[1 - ativa])) {
        return;
    }
 
    for (int i = 0; i < MAX_BULLETS; i++) {
        if (!bullets[i].active) {
-           bullets[i].x = x+10;
-           bullets[i].y = y;
            bullets[i].active = 1;
            bullets[i].is_enemy_bullet = is_enemy_bullet;
+           
+           // Posição ajustada (centralizada) conforme correção anterior
+           bullets[i].x = x; 
+           bullets[i].y = y;
 
            int deucerto = 1;
 
            if (is_enemy_bullet) {
-                // VOLTA A LÓGICA ORIGINAL DO INIMIGO (Usando btypes aleatórios)
-                bullets[i].x = x;
+                // ... (Lógica do inimigo mantida igual) ...
                 int rand_index = rand() % 3;
-               
-                // Nota: O código original tinha um bug lógico aqui acessando bullets[i].spread antes de definir,
-                // mas corrigi para usar btypes[rand_index].spread para manter a lógica funcional.
                 bullets[i].spread = btypes[rand_index].spread; 
-                
                 bullets[i].speedx = (bullets[i].spread == 0) ? 0 : (rand() % 2 == 0) ? rand() % bullets[i].spread : -rand() % bullets[i].spread;
                 bullets[i].speedy = btypes[rand_index].speedy;
                 bullets[i].radius = btypes[rand_index].radius;
                 bullets[i].cooldown = btypes[rand_index].cooldown;
                 bullets[i].damage = btypes[rand_index].damage;
 
-           } else { // player bullet
-               if (Vazia(&pbullets[0]) && Vazia(&pbullets[1])) { // no bullet selected
-                    bullets[i].active = 0;
+           } else { // Player Bullet
+               
+               // Se a fila ativa estiver vazia aqui, a recarga automática vai cuidar no próximo frame.
+               // Apenas impedimos de atirar "nada".
+               if (Vazia(&pbullets[ativa])) {
+                   bullets[i].active = 0; // Cancela a criação da bala
                    break;
                }
 
-               if (!Vazia(&pbullets[ativa])) {
-                   Retira(&pbullets[ativa], &atual, &deucerto);
-                   Insere(&pbullets[1 - ativa], atual, &deucerto);
-                    bullet_cooldown = btypes[atual].cooldown;
-                    bullets[i].speedx = (btypes[atual].spread == 0) ? 0 : (rand() % 2 == 0) ? rand() % btypes[atual].spread : -rand() % btypes[atual].spread;
-                    bullets[i].speedy = btypes[atual].speedy;
-                    bullets[i].radius = btypes[atual].radius;
-                    bullets[i].cooldown = btypes[atual].cooldown - btypes[atual].cooldown*(ShootingSpeedBonus/100.0);
-                    bullets[i].damage = btypes[atual].damage + btypes[atual].damage * DmgBonus/100.0;
-               } else {
-                   ativa = 1 - ativa; 
-                   bullet_cooldown = (Nelementos(&pbullets[ativa])*10 - BulletCooldownReduction);
-                   bullets[i].active = 0;
-               }
+               // Lógica de tirar da fila e atirar
+               Retira(&pbullets[ativa], &atual, &deucerto);
+               Insere(&pbullets[1 - ativa], atual, &deucerto); // Joga pro descarte
+
+               bullet_cooldown = btypes[atual].cooldown;
+               
+               bullets[i].speedx = (btypes[atual].spread == 0) ? 0 : (rand() % 2 == 0) ? rand() % btypes[atual].spread : -rand() % btypes[atual].spread;
+               bullets[i].speedy = btypes[atual].speedy;
+               bullets[i].radius = btypes[atual].radius;
+               
+               // Aplica bônus
+               double cd_bonus = btypes[atual].cooldown * (ShootingSpeedBonus/100.0);
+               bullets[i].cooldown = btypes[atual].cooldown - cd_bonus;
+               
+               double dmg_bonus = btypes[atual].damage * (DmgBonus/100.0);
+               bullets[i].damage = btypes[atual].damage + dmg_bonus;
            }
            break;
        }
@@ -282,6 +309,9 @@ void draw_horizontal_bullet_mag(BITMAP* buffer, BITMAP* playerBullet1, BITMAP* p
 }
 
 void update_bullets() {
+   // Chama a recarga automática todo frame
+   check_auto_reload();
+
    if (bullet_cooldown > 0) {
        bullet_cooldown--;
    }
@@ -290,23 +320,15 @@ void update_bullets() {
        if (bullets[i].active) {
            if (bullets[i].is_enemy_bullet) {
                bullets[i].x += bullets[i].speedx;
-               if (bullets[i].x > SCREEN_WIDTH) { // Mantido WIDTH conforme correções recentes
-                   bullets[i].active = 0;
-               }
-                bullets[i].y += bullets[i].speedy;
-               if (bullets[i].y > SCREEN_HEIGHT) { // Mantido HEIGHT conforme correções recentes
-                   bullets[i].active = 0;
-               }
+               if (bullets[i].x > SCREEN_WIDTH) bullets[i].active = 0;
+               bullets[i].y += bullets[i].speedy;
+               if (bullets[i].y > SCREEN_HEIGHT) bullets[i].active = 0;
            }
            else {
                bullets[i].x -= bullets[i].speedx;
-               if (bullets[i].x < 0) {
-                   bullets[i].active = 0;
-               }
+               if (bullets[i].x < 0) bullets[i].active = 0;
                bullets[i].y -= bullets[i].speedy;
-               if (bullets[i].y < 0) {
-                   bullets[i].active = 0;
-               }
+               if (bullets[i].y < 0) bullets[i].active = 0;
            }
        }
    }
@@ -316,17 +338,33 @@ void draw_bullets(BITMAP* buffer, BITMAP* enemy_bullet1, BITMAP* playerBullet1, 
    for (int i = 0; i < MAX_BULLETS; i++) {
        if (bullets[i].active) {
            if (bullets[i].is_enemy_bullet) {
-               circlefill(buffer, bullets[i].x - 5, bullets[i].y + 5, bullets[i].radius, makecol(255, 50, 50)); 
+               // DEBUG: Se quiser ver a hitbox real do inimigo, descomente a linha abaixo
+               // circle(buffer, bullets[i].x, bullets[i].y, bullets[i].radius, makecol(255, 0, 0));
+               
+               // Ajeitei aqui também: removi o deslocamento (-5, +5) do círculo
+               circlefill(buffer, bullets[i].x, bullets[i].y, bullets[i].radius, makecol(255, 50, 50)); 
            } else {
-               // Verifica os raios originais (3, 5, 1)
+               // --- CORREÇÃO AQUI ---
+               // O sprite é desenhado subtraindo METADE da largura/altura para ficar centralizado.
+               // Removi o "-10" e "-20" extras que causavam o deslocamento visual.
+               
                if(bullets[i].radius == 3){
-                    masked_blit(playerBullet1, buffer, 0, 0, bullets[i].x - playerBullet1->w / 2 - 10, bullets[i].y - playerBullet1->h / 2 - 20, playerBullet1->w, playerBullet1->h); 
+                    masked_blit(playerBullet1, buffer, 0, 0, 
+                        bullets[i].x - playerBullet1->w / 2, 
+                        bullets[i].y - playerBullet1->h / 2, 
+                        playerBullet1->w, playerBullet1->h); 
                }
                if(bullets[i].radius == 5){
-                    masked_blit(playerBullet2, buffer, 0, 0, bullets[i].x - playerBullet2->w / 2 - 10, bullets[i].y - playerBullet2->h / 2 - 20, playerBullet2->w, playerBullet2->h); 
+                    masked_blit(playerBullet2, buffer, 0, 0, 
+                        bullets[i].x - playerBullet2->w / 2, 
+                        bullets[i].y - playerBullet2->h / 2, 
+                        playerBullet2->w, playerBullet2->h); 
                }
                if(bullets[i].radius == 1){
-                    masked_blit(playerBullet3, buffer, 0, 0, bullets[i].x - playerBullet3->w / 2 - 10, bullets[i].y - playerBullet3->h / 2 - 20, playerBullet3->w, playerBullet3->h); 
+                    masked_blit(playerBullet3, buffer, 0, 0, 
+                        bullets[i].x - playerBullet3->w / 2, 
+                        bullets[i].y - playerBullet3->h / 2, 
+                        playerBullet3->w, playerBullet3->h); 
                }
            }
        }
@@ -350,3 +388,4 @@ void shoot_custom_bullet(int x, int y, int vx, int vy) {
        }
    }
 }
+
