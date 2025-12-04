@@ -1,3 +1,5 @@
+// --- ARQUIVO: menu.h ---
+
 // Variável global ou estática para o título cacheado
 BITMAP *title_bitmap_cache = NULL;
 
@@ -45,16 +47,17 @@ void draw_menu(BITMAP* buffer) {
         masked_blit(title_bitmap_cache, buffer, 0, 0, x_title, 10, title_bitmap_cache->w, title_bitmap_cache->h);
     }
 
-    // 2. Créditos (Mantido igual)
+    // 2. Créditos ATUALIZADOS
     int color_green = makecol(10, 200, 10);
     
     textprintf_centre_ex(buffer, font, screen_width/2, 60, color_green, -1, "Created by");
     textprintf_centre_ex(buffer, font, screen_width/2, 75, color_green, -1, "Guilherme Aoki");
     textprintf_centre_ex(buffer, font, screen_width/2, 90, color_green, -1, "Lucas Yoshimura");
     textprintf_centre_ex(buffer, font, screen_width/2, 105, color_green, -1, "Oliver Ugarte");
+    textprintf_centre_ex(buffer, font, screen_width/2, 120, color_green, -1, "Nicolas Albino");
 
     // 3. Start
-    if ((retrace_count / 30) % 2 == 0) { // Efeito de piscar (Blink) a cada meio segundo
-        textprintf_centre_ex(buffer, font, screen_width/2, 170, color_green, -1, "Press ENTER to start");
+    if ((retrace_count / 30) % 2 == 0) { // Efeito de piscar (Blink)
+        textprintf_centre_ex(buffer, font, screen_width/2, 175, color_green, -1, "Press ENTER to start");
     }
 }
