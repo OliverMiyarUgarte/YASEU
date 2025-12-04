@@ -4,6 +4,9 @@
 // DEFINIÇÃO DOS NOVOS TAMANHOS
 #define PLAYER_HITBOX 8  // Sprite 16x16 -> Raio 8
 
+// Extern declarations
+extern double delta_time;
+
 // Variáveis globais necessárias
 extern int player_x, player_y;
 extern int player_health;

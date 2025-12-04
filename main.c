@@ -30,6 +30,11 @@ int global_spawn_rate = 30;
 int enemy_counter = 0; 
 char* level_message = "";
 
+// Delta Time System
+long prev_time = 0;
+double delta_time = 0.0;
+const double FIXED_DT = 0.016666; 
+
 // INCLUDES
 #include "tree.h"        
 #include "bullets.h"
@@ -81,6 +86,20 @@ void configure_level(NodeType type) {
             level_kill_target = 5; 
             level_message = "FINAL BATTLE"; break;
     }
+}
+
+
+void update_delta_time() {
+    long current_time = retrace_count;
+    if (prev_time == 0) {
+        prev_time = current_time;
+        delta_time = FIXED_DT;
+    } else {
+        delta_time = (double)(current_time - prev_time) / 70.0;
+        if (delta_time > 0.05) delta_time = 0.05;
+        if (delta_time < 0.001) delta_time = 0.001;
+    }
+    prev_time = current_time;
 }
 
 int main(void) {
@@ -356,6 +375,8 @@ int main(void) {
             bool boss_warning_shown = false;
 
             while (level_running) {
+                update_delta_time();  // Calculate delta time at the start of each frame
+                
                 if (game_over || player_health <= 0) {
                     textout_centre_ex(screen, font, "YOU DIED", SCREEN_WIDTH/2, SCREEN_HEIGHT/2, makecol(255,0,0), -1);
                     rest(2000);
@@ -388,10 +409,10 @@ int main(void) {
                     masked_blit(fundo, buffer, 0, 0, 80, 0, fundo->w, fundo->h);
                 }
 
-                if (key[KEY_UP] && player_y - PLAYER_RADIUS > 0) player_y -= 4;
-                if (key[KEY_DOWN] && player_y + PLAYER_RADIUS < SCREEN_HEIGHT) player_y += 4;
-                if (key[KEY_LEFT] && player_x - PLAYER_RADIUS > SCREEN_WIDTH / 4) player_x -= 4;
-                if (key[KEY_RIGHT] && player_x + PLAYER_RADIUS < (SCREEN_WIDTH * 3) / 4) player_x += 4;
+                if (key[KEY_UP] && player_y - PLAYER_RADIUS > 0) player_y -= (int)(4 * 60 * delta_time);
+                if (key[KEY_DOWN] && player_y + PLAYER_RADIUS < SCREEN_HEIGHT) player_y += (int)(4 * 60 * delta_time);
+                if (key[KEY_LEFT] && player_x - PLAYER_RADIUS > SCREEN_WIDTH / 4) player_x -= (int)(4 * 60 * delta_time);
+                if (key[KEY_RIGHT] && player_x + PLAYER_RADIUS < (SCREEN_WIDTH * 3) / 4) player_x += (int)(4 * 60 * delta_time);
                 if (key[KEY_SPACE] && bullet_cooldown <= 0) shoot_bullet(player_x, player_y + 5, 0);
                 if (key[KEY_ESC]) { campaign_running = false; level_running = false; }
 
@@ -432,7 +453,10 @@ int main(void) {
                 update_bullets(); update_enemies();
                 check_bullet_enemy_collisions(); check_player_bullet_collision(); check_player_enemy_collision();
 
-                if (player_invincible) { player_hit_timer--; if (player_hit_timer <= 0) player_invincible = false; }
+                if (player_invincible) { 
+                    player_hit_timer -= (int)(delta_time * 60.0); 
+                    if (player_hit_timer <= 0) player_invincible = false; 
+                }
                 if (!player_invincible || (player_hit_timer % 4) < 2) masked_blit(player, buffer, 0, 0, player_x - player->w/2, player_y - player->h/2, player->w, player->h);
 
                 draw_bullets(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);

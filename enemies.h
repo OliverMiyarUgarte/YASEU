@@ -5,8 +5,8 @@
 #include <math.h>    // Necessário para atan2, cos, sin
 #include "tree.h"    // Necessário para reconhecer NODE_BOSS
 
-// Declaração como extern para evitar erro de redefinição
-// (As variáveis reais estão criadas no main.c)
+// Extern declarations for delta time and other globals
+extern double delta_time;
 extern int global_enemy_hp;
 extern int global_spawn_rate;
 extern int ENEMY_RADIUS;
