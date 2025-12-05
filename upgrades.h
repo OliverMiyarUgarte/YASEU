@@ -46,6 +46,7 @@ void draw_upgrades_menu(BITMAP* buffer,int FirstShop) {
     textprintf_ex(buffer, font, x_title, 10, makecol(200,200,50), -1, FirstShop ? title2 : title1);
 
 
+
     // opcao 1
     UpgradeInfo* A = &all_upgrades[ upgrade_slot[0] ];
     int centerA = spacing * 0 + spacing/2;
@@ -140,9 +141,20 @@ void selectupgrade(int n){
     }
 }
 
+void resetupgrades(){
+    addshootingspeed(-getshootingspeed());
+    addcooldown(-getcooldown());
+    adddmg(-getdmg());
+    addmagsize(5 -getmagsize());
+}
+
 void draw_bullets_menu(BITMAP* buffer, BITMAP *playerBullet1, BITMAP *playerBullet2, BITMAP *playerBullet3, double* BulletCooldownReduction) {
     clear_to_color(buffer, makecol(0, 0, 0));
-    
+
+    textprintf_ex(buffer, font, 20, 40, makecol(10, 200, 10), -1, "Reload CD: %.2f", ((Nelementos(&pbullets[0])*10.0)/60));
+
+    textprintf_ex(buffer, font, 20, 60, makecol(10, 200, 10), -1, "Max Mag: %d", getmagsize());
+
     const char* title = "Bullet Selection";
     int x_title = (SCREEN_WIDTH - text_length(font, title)) / 2;
     textprintf_ex(buffer, font, x_title, 10, makecol(200,200,50), -1, title);

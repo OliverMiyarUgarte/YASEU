@@ -162,6 +162,7 @@ int main(void) {
         init_bullets(); 
         init_enemies();
         init_particles();
+        resetupgrades();
         FirstShop = 1;
         
         // --- LOOP DO MENU PRINCIPAL ---
@@ -176,34 +177,6 @@ int main(void) {
         }
         while (key[KEY_ENTER]) { rest(10); } 
         if (exit_program) break;
-
-        // --- PREPARAÇÃO DE BALAS ---
-        int prep_cooldown = 10;
-        double dummy_cd_reduction = 0; 
-        while (1) {
-            Transfere(&pbullets[1], &pbullets[0]); 
-            clear_to_color(buffer, makecol(20, 20, 40)); 
-            draw_bullets_menu(buffer, playerBullet1, playerBullet2, playerBullet3, &dummy_cd_reduction);
-            textout_centre_ex(buffer, font, "PREPARE FOR DEPLOYMENT", SCREEN_WIDTH/2, 170, makecol(255, 50, 50), -1);
-            textprintf_ex(buffer, font, 20, 40, makecol(10, 200, 10), -1, "Reload CD: %.2f", ((Nelementos(&pbullets[0])*10.0)/60));
-            textprintf_ex(buffer, font, 20, 60, makecol(10, 200, 10), -1, "Max Mag: %d", getmagsize());
-
-            if(key[KEY_1] && prep_cooldown <= 0 && (Nelementos(&pbullets[0]) < getmagsize())){ selectbullet(0); prep_cooldown = 10; }
-            if(key[KEY_2] && prep_cooldown <= 0 && (Nelementos(&pbullets[0]) < getmagsize())){ selectbullet(1); prep_cooldown = 10; addcooldown(-5); }
-            if(key[KEY_3] && prep_cooldown <= 0 && (Nelementos(&pbullets[0]) < getmagsize())){ selectbullet(2); prep_cooldown = 10; addcooldown(5); }
-            if(key[KEY_BACKSPACE] && prep_cooldown <= 0){
-                int deselected = deselectbullet();
-                if (deselected == 1){addcooldown(5);} if (deselected == 2){addcooldown(-5);}
-                prep_cooldown = 10;
-            }
-            if(key[KEY_ENTER] && prep_cooldown <= 0) {
-                if (Vazia(&pbullets[0])) textout_centre_ex(buffer, font, "NO AMMO SELECTED!", SCREEN_WIDTH / 2, 100, makecol(255, 50, 50), -1);
-                else { while (key[KEY_ENTER]){ rest(10); }; break; }
-            }
-            if(prep_cooldown > 0) prep_cooldown--;
-            blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-            rest(16);
-        }
 
         // --- MAPA ---
         TreeNode *campaign_map;
