@@ -311,6 +311,12 @@ void draw_horizontal_bullet_mag(BITMAP* buffer, BITMAP* playerBullet1, BITMAP* p
     }
 }
 
+void resetmag(){
+    Transfere(&pbullets[1], &pbullets[0]);
+    ativa = 0;
+    bullet_cooldown = 0;
+}
+
 void update_bullets() {
    // Chama a recarga automática todo frame
    check_auto_reload();

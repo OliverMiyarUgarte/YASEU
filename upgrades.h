@@ -30,13 +30,21 @@ void randomize_upgrades() {
     }
 }
 
-void draw_upgrades_menu(BITMAP* buffer) {
+void draw_upgrades_menu(BITMAP* buffer,int FirstShop) {
+    
     clear_to_color(buffer, makecol(0, 0, 0));
 
     int screen_width = 320;
     int top_y = 40;
     int spacing = screen_width / 3;
     int line_gap = text_height(font) + 2;
+
+    const char* title1 = "Upgrade Selection";
+    const char* title2 = "Prepare For Deployment";
+
+    int x_title = (SCREEN_WIDTH - text_length(font, FirstShop ? title2 : title1)) / 2;
+    textprintf_ex(buffer, font, x_title, 10, makecol(200,200,50), -1, FirstShop ? title2 : title1);
+
 
     // opcao 1
     UpgradeInfo* A = &all_upgrades[ upgrade_slot[0] ];
