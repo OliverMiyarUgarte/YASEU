@@ -1,13 +1,14 @@
-#include "fila.h"
+#ifndef BULLETS_H
+#define BULLETS_H
 
-// Extern declaration for delta time (defined in main.c)
-extern double delta_time;
+#include "fila.h"
+#include <stdio.h> // Necessário para snprintf
 
 typedef struct {
    int x, y;
    int active;
    int is_enemy_bullet;
-   int speedx; // n usado
+   int speedx; 
    int speedy;
    int radius;
    double cooldown;
@@ -56,13 +57,11 @@ int getmagsize(){
     return maxmagsize;
 }
 
-
 void init_bullets() {
    for (int i = 0; i < MAX_BULLETS; i++) {
        bullets[i].active = 0;
        bullets[i].is_enemy_bullet = 0;
    }
-
 
    Cria(&pbullets[0]);
    Cria(&pbullets[1]);
@@ -91,7 +90,6 @@ void init_bullets() {
    btypes[2].cooldown = 2; 
    btypes[2].damage = 1;
    btypes[2].spread = 3;
-
 }
 
 void selectbullet(int i){
@@ -103,21 +101,21 @@ void selectbullet(int i){
 
 int deselectbullet() {
     int bullet;
-    int ok;
+    // int ok; // Variável não usada removida
 
     if (Vazia(&pbullets[0])) {
         return -1; 
     }
 
-    Node *atual = pbullets[0].primeiro;
+    Node *atual_node = pbullets[0].primeiro; // Renomeado para evitar conflito com global 'atual'
     Node *anterior = NULL;
 
-    while (atual->next != NULL) {
-        anterior = atual;
-        atual = atual->next;
+    while (atual_node->next != NULL) {
+        anterior = atual_node;
+        atual_node = atual_node->next;
     }
 
-    bullet = atual->info;
+    bullet = atual_node->info;
 
     if (anterior == NULL) {
         pbullets[0].primeiro = NULL;
@@ -127,7 +125,7 @@ int deselectbullet() {
         pbullets[0].ultimo = anterior;
     }
 
-    free(atual);
+    free(atual_node);
     return bullet;
 }
 
@@ -151,7 +149,6 @@ void check_auto_reload() {
     }
 }
 
-
 void shoot_bullet(int x, int y, int is_enemy_bullet) {
    // Se for player e estiver em cooldown, não faz nada
    if (is_enemy_bullet == 0 && bullet_cooldown > 0) {
@@ -168,14 +165,14 @@ void shoot_bullet(int x, int y, int is_enemy_bullet) {
            bullets[i].active = 1;
            bullets[i].is_enemy_bullet = is_enemy_bullet;
            
-           // Posição ajustada (centralizada) conforme correção anterior
+           // Posição ajustada (centralizada)
            bullets[i].x = x; 
            bullets[i].y = y;
 
-           int deucerto = 1;
+           int deucerto_local = 1; // Renomeado para evitar conflito
 
            if (is_enemy_bullet) {
-                // ... (Lógica do inimigo mantida igual) ...
+                // Lógica simples para inimigo padrão (Boss usa shoot_custom_bullet)
                 int rand_index = rand() % 3;
                 bullets[i].spread = btypes[rand_index].spread; 
                 bullets[i].speedx = (bullets[i].spread == 0) ? 0 : (rand() % 2 == 0) ? rand() % bullets[i].spread : -rand() % bullets[i].spread;
@@ -186,16 +183,14 @@ void shoot_bullet(int x, int y, int is_enemy_bullet) {
 
            } else { // Player Bullet
                
-               // Se a fila ativa estiver vazia aqui, a recarga automática vai cuidar no próximo frame.
-               // Apenas impedimos de atirar "nada".
                if (Vazia(&pbullets[ativa])) {
-                   bullets[i].active = 0; // Cancela a criação da bala
+                   bullets[i].active = 0; // Cancela
                    break;
                }
 
                // Lógica de tirar da fila e atirar
-               Retira(&pbullets[ativa], &atual, &deucerto);
-               Insere(&pbullets[1 - ativa], atual, &deucerto); // Joga pro descarte
+               Retira(&pbullets[ativa], &atual, &deucerto_local);
+               Insere(&pbullets[1 - ativa], atual, &deucerto_local); // Joga pro descarte
 
                bullet_cooldown = btypes[atual].cooldown;
                
@@ -217,14 +212,16 @@ void shoot_bullet(int x, int y, int is_enemy_bullet) {
 
 void draw_current_cooldown(BITMAP* buffer){
     char str_buffer[10];
-    snprintf(str_buffer,sizeof(str_buffer), "%.1f", bullet_cooldown);
+    snprintf(str_buffer,sizeof(str_buffer), "%.1f", bullet_cooldown); // Corrigido snprintf
     textprintf_ex(buffer, font, SCREEN_WIDTH*(4.5/5), 10, makecol(10, 200, 10), -1, "%.1f" ,  str_buffer);
 }
 
 void draw_bullet_cooldown(BITMAP* buffer, fila* f){
-    double cd = (Nelementos(f)*10 - BulletCooldownReduction)/60;
+    double cd = (Nelementos(f)*10 - BulletCooldownReduction)/60.0;
     char str_buffer[10];
-    (str_buffer,sizeof(str_buffer), "%.1f", cd);
+    
+    // CORREÇÃO: Adicionado snprintf que estava faltando
+    snprintf(str_buffer,sizeof(str_buffer), "%.1f", cd);
 
     textprintf_ex(buffer, font, SCREEN_WIDTH*(4.5/5), 10, makecol(10, 200, 10), -1, "%.1f" , bullet_cooldown/60.0);
 }
@@ -237,25 +234,26 @@ void draw_bullet_mag(BITMAP* buffer, BITMAP* playerBullet1, BITMAP* playerBullet
     fila temp;
     Cria(&temp);
     int pos = 10;
-    int atual;
+    int atual_temp;
+    int deu;
     while (!Vazia(&pbullets[ativa])){
-        Retira(&pbullets[ativa], &atual, &deucerto);
-        Insere(&temp, atual, &deucerto);
-        //circlefill(buffer, SCREEN_WIDTH*(4.0/5), pos, 10 /*radius*/, makecol(255, 50, 50));
-               if(atual == 0){
-                    masked_blit(playerBullet1, buffer, 0, 0, SCREEN_WIDTH*(4.0/5), pos, playerBullet1->w, playerBullet1->h);
-               }
-               if(atual == 1){
-                    masked_blit(playerBullet2, buffer, 0, 0, SCREEN_WIDTH*(4.0/5), pos, playerBullet2->w, playerBullet2->h);
-               }
-               if(atual == 2){
-                    masked_blit(playerBullet3, buffer, 0, 0, SCREEN_WIDTH*(4.0/5), pos, playerBullet3->w, playerBullet3->h);
-               }
+        Retira(&pbullets[ativa], &atual_temp, &deu);
+        Insere(&temp, atual_temp, &deu);
+       
+        if(atual_temp == 0){
+             masked_blit(playerBullet1, buffer, 0, 0, SCREEN_WIDTH*(4.0/5), pos, playerBullet1->w, playerBullet1->h);
+        }
+        if(atual_temp == 1){
+             masked_blit(playerBullet2, buffer, 0, 0, SCREEN_WIDTH*(4.0/5), pos, playerBullet2->w, playerBullet2->h);
+        }
+        if(atual_temp == 2){
+             masked_blit(playerBullet3, buffer, 0, 0, SCREEN_WIDTH*(4.0/5), pos, playerBullet3->w, playerBullet3->h);
+        }
         pos += 10;
     }
     while (!Vazia(&temp)){
-        Retira(&temp, &atual, &deucerto);
-        Insere(&pbullets[ativa], atual, &deucerto);
+        Retira(&temp, &atual_temp, &deu);
+        Insere(&pbullets[ativa], atual_temp, &deu);
     }
 }
 
@@ -264,23 +262,21 @@ void draw_horizontal_bullet_mag(BITMAP* buffer, BITMAP* playerBullet1, BITMAP* p
     Cria(&temp);
 
     int count = 0;
-    int atual;
-
+    int atual_temp;
+    int deu;
 
     while (!Vazia(&pbullets[ativa])) {
-        Retira(&pbullets[ativa], &atual, &deucerto);
-        Insere(&temp, atual, &deucerto);
+        Retira(&pbullets[ativa], &atual_temp, &deu);
+        Insere(&temp, atual_temp, &deu);
         count++;
     }
 
-
     while (!Vazia(&temp)) {
-        Retira(&temp, &atual, &deucerto);
-        Insere(&pbullets[ativa], atual, &deucerto);
+        Retira(&temp, &atual_temp, &deu);
+        Insere(&pbullets[ativa], atual_temp, &deu);
     }
 
     if (count == 0) return;
-
 
     int spacing = 12;   
     int total_width = count * spacing;
@@ -291,14 +287,14 @@ void draw_horizontal_bullet_mag(BITMAP* buffer, BITMAP* playerBullet1, BITMAP* p
 
     Cria(&temp);
     while (!Vazia(&pbullets[ativa])) {
-        Retira(&pbullets[ativa], &atual, &deucerto);
-        Insere(&temp, atual, &deucerto);
+        Retira(&pbullets[ativa], &atual_temp, &deu);
+        Insere(&temp, atual_temp, &deu);
 
         BITMAP* sprite = NULL;
 
-        if (atual == 0) sprite = playerBullet1;
-        if (atual == 1) sprite = playerBullet2;
-        if (atual == 2) sprite = playerBullet3;
+        if (atual_temp == 0) sprite = playerBullet1;
+        if (atual_temp == 1) sprite = playerBullet2;
+        if (atual_temp == 2) sprite = playerBullet3;
 
         rotate_sprite(buffer, sprite, start_x, y, angle);
 
@@ -306,8 +302,8 @@ void draw_horizontal_bullet_mag(BITMAP* buffer, BITMAP* playerBullet1, BITMAP* p
     }
 
     while (!Vazia(&temp)) {
-        Retira(&temp, &atual, &deucerto);
-        Insere(&pbullets[ativa], atual, &deucerto);
+        Retira(&temp, &atual_temp, &deu);
+        Insere(&pbullets[ativa], atual_temp, &deu);
     }
 }
 
@@ -322,22 +318,31 @@ void update_bullets() {
    check_auto_reload();
 
    if (bullet_cooldown > 0) {
-       bullet_cooldown -= delta_time * 60.0;  // Convert delta_time to frame-like units
+       bullet_cooldown--; // Decremento simples por frame
    }
   
    for (int i = 0; i < MAX_BULLETS; i++) {
        if (bullets[i].active) {
            if (bullets[i].is_enemy_bullet) {
-               bullets[i].x += (int)(bullets[i].speedx * delta_time * 60.0);
-               if (bullets[i].x > SCREEN_WIDTH) bullets[i].active = 0;
-               bullets[i].y += (int)(bullets[i].speedy * delta_time * 60.0);
-               if (bullets[i].y > SCREEN_HEIGHT) bullets[i].active = 0;
+               // Soma direta da velocidade (inteiros)
+               bullets[i].x += bullets[i].speedx;
+               bullets[i].y += bullets[i].speedy;
+               
+               // Verifica saída da tela (todos os lados)
+               if (bullets[i].x > SCREEN_WIDTH + 50 || bullets[i].x < -50 ||
+                   bullets[i].y > SCREEN_HEIGHT + 50 || bullets[i].y < -50) {
+                   bullets[i].active = 0;
+               }
            }
            else {
+               // Jogador atira "pra cima" ou lados
                bullets[i].x -= bullets[i].speedx;
-               if (bullets[i].x < 0) bullets[i].active = 0;
                bullets[i].y -= bullets[i].speedy;
-               if (bullets[i].y < 0) bullets[i].active = 0;
+               
+               if (bullets[i].x < -20 || bullets[i].x > SCREEN_WIDTH + 20 ||
+                   bullets[i].y < -20 || bullets[i].y > SCREEN_HEIGHT + 20) {
+                   bullets[i].active = 0;
+               }
            }
        }
    }
@@ -347,16 +352,8 @@ void draw_bullets(BITMAP* buffer, BITMAP* enemy_bullet1, BITMAP* playerBullet1, 
    for (int i = 0; i < MAX_BULLETS; i++) {
        if (bullets[i].active) {
            if (bullets[i].is_enemy_bullet) {
-               // DEBUG: Se quiser ver a hitbox real do inimigo, descomente a linha abaixo
-               // circle(buffer, bullets[i].x, bullets[i].y, bullets[i].radius, makecol(255, 0, 0));
-               
-               // Ajeitei aqui também: removi o deslocamento (-5, +5) do círculo
                circlefill(buffer, bullets[i].x, bullets[i].y, bullets[i].radius, makecol(255, 50, 50)); 
            } else {
-               // --- CORREÇÃO AQUI ---
-               // O sprite é desenhado subtraindo METADE da largura/altura para ficar centralizado.
-               // Removi o "-10" e "-20" extras que causavam o deslocamento visual.
-               
                if(bullets[i].radius == 3){
                     masked_blit(playerBullet1, buffer, 0, 0, 
                         bullets[i].x - playerBullet1->w / 2, 
@@ -398,3 +395,4 @@ void shoot_custom_bullet(int x, int y, int vx, int vy) {
    }
 }
 
+#endif

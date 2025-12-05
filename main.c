@@ -13,6 +13,9 @@
 #define ENEMY_SHOOT_COOLDOWN 90
 #define PLAYER_INVINCIBILITY_TIME 60
 
+// Taxa de atualização lógica (60 vezes por segundo)
+#define LOGIC_RATE 30
+
 // Variáveis Globais
 int player_x = 100, player_y = 100;
 int player_health = 5; 
@@ -30,21 +33,25 @@ int global_spawn_rate = 30;
 int enemy_counter = 0; 
 char* level_message = "";
 
-// Delta Time System
-long prev_time = 0;
-double delta_time = 0.0;
-const double FIXED_DT = 0.016666; 
-
 // INCLUDES
 #include "tree.h"        
 #include "bullets.h"
 #include "enemies.h"
 #include "collis~1.h" 
 #include "menu.h"
-#include "mapCre~1.h"
+#include "mapcre~1.h"
 #include "mapDraw.h"
 #include "heart.h"
 #include "upgrades.h" 
+#include "partic~1.h" 
+
+// --- SISTEMA DE TIMER FIXO ---
+// Essa variável conta quantos "pulsos" de lógica o jogo deve processar
+volatile int ticks = 0;
+void ticker() {
+    ticks++;
+}
+END_OF_FUNCTION(ticker)
 
 // Função auxiliar para carregar sprites
 BITMAP* load_bitmap_resized(const char* filename, int new_w, int new_h) {
@@ -70,9 +77,7 @@ void configure_level(NodeType type) {
             level_message = "MISSION: DESTROY 5 HEAVY UNITS"; break;
         case NODE_EVENT:
             current_bg_color = makecol(0, 0, 40);
-            global_enemy_hp = 1; global_spawn_rate = 15; level_kill_target = 30;
-            global_spawn_rate = 8;
-            level_kill_target = 50;
+            global_enemy_hp = 1; global_spawn_rate = 8; level_kill_target = 50;
             level_message = "SURVIVE THE SWARM"; break;
         case NODE_STORE:
             current_bg_color = makecol(0, 40, 0); 
@@ -88,25 +93,19 @@ void configure_level(NodeType type) {
     }
 }
 
-
-void update_delta_time() {
-    long current_time = retrace_count;
-    if (prev_time == 0) {
-        prev_time = current_time;
-        delta_time = FIXED_DT;
-    } else {
-        delta_time = (double)(current_time - prev_time) / 70.0;
-        if (delta_time > 0.05) delta_time = 0.05;
-        if (delta_time < 0.001) delta_time = 0.001;
-    }
-    prev_time = current_time;
-}
-
 int main(void) {
     srand(time(NULL));
     if (allegro_init() != 0) return 1;
 
-    install_keyboard(); install_timer();
+    install_keyboard(); 
+    install_timer(); // Instala o sistema de timer
+    
+    // CONFIGURA O TIMER PARA 60 TICKS POR SEGUNDO
+    // Isso garante que a função 'ticker' seja chamada 60x por segundo
+    LOCK_VARIABLE(ticks);
+    LOCK_FUNCTION(ticker);
+    install_int_ex(ticker, BPS_TO_TIMER(LOGIC_RATE));
+
     set_color_depth(8);
     if (set_gfx_mode(GFX_AUTODETECT, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0) != 0) return 1;
 
@@ -157,50 +156,69 @@ int main(void) {
 
     while (!exit_program) {
         // Reset do jogo
-        player_health = 15; 
+        player_health = 5; 
         player_x = 100; player_y = 100;
-        game_over = 0; init_bullets(); init_enemies();
+        game_over = 0; 
+        init_bullets(); 
+        init_enemies();
+        init_particles();
         FirstShop = 1;
         
         // --- LOOP DO MENU PRINCIPAL ---
         while (!key[KEY_ENTER]) {
             draw_menu(buffer);
 
-            // ATALHO SECRETO: Pressione 'B' para Boss Rush
-            if (key[KEY_B]) { 
-                debug_boss_mode = 1; 
-                exit_program = false; 
-                break;
-            }
-
+            if (key[KEY_B]) { debug_boss_mode = 1; exit_program = false; break; }
             if (key[KEY_ESC]) { exit_program = true; break; }
-            blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); rest(16);
+            
+            blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); 
+            rest(16);
         }
         while (key[KEY_ENTER]) { rest(10); } 
         if (exit_program) break;
 
-        TreeNode *campaign_map;
+        // --- PREPARAÇÃO DE BALAS ---
+        int prep_cooldown = 10;
+        double dummy_cd_reduction = 0; 
+        while (1) {
+            Transfere(&pbullets[1], &pbullets[0]); 
+            clear_to_color(buffer, makecol(20, 20, 40)); 
+            draw_bullets_menu(buffer, playerBullet1, playerBullet2, playerBullet3, &dummy_cd_reduction);
+            textout_centre_ex(buffer, font, "PREPARE FOR DEPLOYMENT", SCREEN_WIDTH/2, 170, makecol(255, 50, 50), -1);
+            textprintf_ex(buffer, font, 20, 40, makecol(10, 200, 10), -1, "Reload CD: %.2f", ((Nelementos(&pbullets[0])*10.0)/60));
+            textprintf_ex(buffer, font, 20, 60, makecol(10, 200, 10), -1, "Max Mag: %d", getmagsize());
 
+            if(key[KEY_1] && prep_cooldown <= 0 && (Nelementos(&pbullets[0]) < getmagsize())){ selectbullet(0); prep_cooldown = 10; }
+            if(key[KEY_2] && prep_cooldown <= 0 && (Nelementos(&pbullets[0]) < getmagsize())){ selectbullet(1); prep_cooldown = 10; addcooldown(-5); }
+            if(key[KEY_3] && prep_cooldown <= 0 && (Nelementos(&pbullets[0]) < getmagsize())){ selectbullet(2); prep_cooldown = 10; addcooldown(5); }
+            if(key[KEY_BACKSPACE] && prep_cooldown <= 0){
+                int deselected = deselectbullet();
+                if (deselected == 1){addcooldown(5);} if (deselected == 2){addcooldown(-5);}
+                prep_cooldown = 10;
+            }
+            if(key[KEY_ENTER] && prep_cooldown <= 0) {
+                if (Vazia(&pbullets[0])) textout_centre_ex(buffer, font, "NO AMMO SELECTED!", SCREEN_WIDTH / 2, 100, makecol(255, 50, 50), -1);
+                else { while (key[KEY_ENTER]){ rest(10); }; break; }
+            }
+            if(prep_cooldown > 0) prep_cooldown--;
+            blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+            rest(16);
+        }
+
+        // --- MAPA ---
+        TreeNode *campaign_map;
         if (debug_boss_mode) {
-            // MODO DEBUG: Cria um mapa minúsculo: [Inicio] -> [BOSS]
             TreeNode* root = create_node(0, NODE_NORMAL);
             TreeNode* boss = create_node(1, NODE_BOSS);
             TreeNode* children[1] = {boss};
-            
             connect_nodes(root, children, 1);
             campaign_map = root;
-            
-            // Dá upgrades para você não chegar pelado no boss
-            addshootingspeed(50);
-            adddmg(50);
-            addmagsize(10);
+            addshootingspeed(50); adddmg(50); addmagsize(10);
         } else {
-            // MODO NORMAL
             campaign_map = generate_map(5);
         }
 
         TreeNode *current_node = campaign_map;
-        
         int selected_child_index = 0; int input_delay = 0;
         bool campaign_running = true;
 
@@ -209,10 +227,8 @@ int main(void) {
             if (current_node->num_children == 0) {
                 clear_to_color(buffer, makecol(0,0,0));
                 textout_centre_ex(buffer, font, "GALAXY SAVED!", SCREEN_WIDTH/2, SCREEN_HEIGHT/2, makecol(255,255,0), -1);
-                textout_centre_ex(buffer, font, "Press ENTER to Restart", SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 20, makecol(255,255,255), -1);
                 blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-                rest(1000); while(!key[KEY_ENTER]) { rest(10); } 
-                campaign_running = false; break; 
+                rest(2000); campaign_running = false; break; 
             }
 
             while (selecting_path) {
@@ -222,8 +238,6 @@ int main(void) {
                 if (input_delay > 0) input_delay--;
                 if (key[KEY_LEFT] && input_delay == 0 && selected_child_index > 0) { selected_child_index--; input_delay = 10; }
                 if (key[KEY_RIGHT] && input_delay == 0 && selected_child_index < current_node->num_children - 1) { selected_child_index++; input_delay = 10; }
-                
-                // CORREÇÃO: Delay de segurança também para entrar
                 if (key[KEY_ENTER] && input_delay == 0) {
                     current_node = current_node->children[selected_child_index];
                     selected_child_index = 0; selecting_path = false; rest(200);
@@ -245,9 +259,8 @@ int main(void) {
                 // 1. INTRODUÇÃO DA LOJA (ANIMAÇÃO DOCKING)
                 clear_to_color(buffer, makecol(0,0,0));
                 stretch_blit(loja_bg, buffer, 0, 0, loja_bg->w, loja_bg->h, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-                textout_centre_ex(buffer, font, "STATION DOCKED", SCREEN_WIDTH/2, SCREEN_HEIGHT/2, makecol(255,255,255), -1);
                 blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-                rest(1000);
+                rest(500);
 
                 menu_cooldown = 10;
                 resetmag();
@@ -262,25 +275,14 @@ int main(void) {
                     if (key[KEY_1] && menu_cooldown <= 0) { selectupgrade(all_upgrades[upgrade_slot[0]].id); break; }
                     if (key[KEY_2] && menu_cooldown <= 0) { selectupgrade(all_upgrades[upgrade_slot[1]].id); break; }
                     if (key[KEY_3] && menu_cooldown <= 0) { selectupgrade(all_upgrades[upgrade_slot[2]].id); break; }
-                    
-                    // Opção 4: CURAR
                     if (key[KEY_4] && menu_cooldown <= 0) { 
-                        if (player_health < 5) { 
-                            player_health += 5; 
-                        }
-                        while(key[KEY_4]) { rest(10); } 
-                        break; 
+                        if (player_health < 5) player_health += 5; 
+                        while(key[KEY_4]) { rest(10); } break; 
                     }
-                    
-                    if (key[KEY_ENTER] && menu_cooldown <= 0) break; // Pular Upgrade
-
+                    if (key[KEY_ENTER] && menu_cooldown <= 0) break; 
                     if (menu_cooldown > 0) menu_cooldown--;
-                    blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-                    rest(16);
+                    blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); rest(16);
                 }
-                
-                // --- SEGURANÇA ENTRE MENUS ---
-                // Espera soltar teclas para não selecionar bala sem querer
                 while(key[KEY_ENTER] || key[KEY_1] || key[KEY_2] || key[KEY_3] || key[KEY_4]) { rest(10); }
                 menu_cooldown = 10;
 
@@ -293,74 +295,110 @@ int main(void) {
                 while (1) {
                     Transfere(&pbullets[1], &pbullets[0]); 
                     double cdreduction = getcooldown();
-                    clear_to_color(buffer, makecol(20, 30, 20)); // Cor verde para diferenciar
-
+                    clear_to_color(buffer, makecol(20, 30, 20)); 
                     draw_bullets_menu(buffer, playerBullet1, playerBullet2, playerBullet3, &cdreduction);
-                    
-                    textprintf_ex(buffer, font, 20, 40, makecol(10, 200, 10), -1, "Reload CD: %.2f", ((Nelementos(&pbullets[0])*10.0 - cdreduction)/60)>0 ? (Nelementos(&pbullets[0])*10.0 - cdreduction)/60 : 0.1);
-                    textprintf_ex(buffer, font, 20, 60, makecol(10, 200, 10), -1, "Max Mag: %d", getmagsize());
-                    
+                    // ... (Textos de reload e mag size igual ao anterior) ...
                     if(key[KEY_1] && menu_cooldown <= 0 && (Nelementos(&pbullets[0]) < getmagsize())){selectbullet(0); menu_cooldown = 10;}
                     if(key[KEY_2] && menu_cooldown <= 0 && (Nelementos(&pbullets[0]) < getmagsize())){selectbullet(1); menu_cooldown = 10; addcooldown(-5);}
                     if(key[KEY_3] && menu_cooldown <= 0 && (Nelementos(&pbullets[0]) < getmagsize())){selectbullet(2); menu_cooldown = 10; addcooldown(5);}
-                    
                     if(key[KEY_BACKSPACE] && menu_cooldown <= 0){
                         int deselected = deselectbullet();
-                        if (deselected == 1){addcooldown(5);}
-                        if (deselected == 2){addcooldown(-5);}
+                        if (deselected == 1){addcooldown(5);} if (deselected == 2){addcooldown(-5);}
                         menu_cooldown = 10;
                     }
-
                     if(key[KEY_ENTER] && menu_cooldown <= 0) {
-                        if (Vazia(&pbullets[0])){
-                            textout_centre_ex(buffer, font, "NO AMMO SELECTED!", SCREEN_WIDTH / 2, 100, makecol(255, 50, 50), -1);
-                        } else {
-                            while (key[KEY_ENTER]){ rest(10); };
-                            break;
-                        }
+                        if (!Vazia(&pbullets[0])) { while (key[KEY_ENTER]){ rest(10); }; break; }
                     }
-
                     if(menu_cooldown > 0) menu_cooldown--;
-                    blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-                    rest(16);
+                    blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); rest(16);
                 }
             } 
             else {
-                // Intro das fases normais
                 clear_to_color(buffer, makecol(0,0,0));
                 textout_centre_ex(buffer, font, level_message, SCREEN_WIDTH/2, SCREEN_HEIGHT/2, makecol(255,255,255), -1);
-                blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-                rest(1500);
+                blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); rest(1000);
             }
 
             bool level_running = true;
             int repair_station_timer = 200; 
             bool boss_warning_shown = false;
 
+            // Reinicia o acumulador de tempo
+            ticks = 0;
+
             while (level_running) {
-                update_delta_time();  // Calculate delta time at the start of each frame
+                // =========================================================
+                // 1. UPDATE LÓGICO (Fixo a 60 vezes por segundo)
+                // =========================================================
+                // O loop roda enquanto houver 'ticks' pendentes. 
+                // Isso garante que se o PC der uma engasgada, ele roda o loop mais vezes
+                // para compensar e manter a velocidade do jogo constante.
+                while (ticks > 0) {
+                    if (game_over || player_health <= 0) {
+                        break; 
+                    }
+                    
+                    // Checagem de Fim de Fase
+                    if (current_node->type == NODE_BOSS) {
+                        if (enemy_counter >= level_kill_target && !boss_warning_shown) boss_warning_shown = true;
+                        check_boss_death();
+                        if (boss_defeated) level_running = false;
+                    } else if (current_node->type != NODE_STORE) {
+                        if (enemy_counter >= level_kill_target) level_running = false;
+                    } else {
+                        repair_station_timer--;
+                        if(repair_station_timer <= 0) level_running = false;
+                    }
+
+                    // Movimentação FIXA (Sem delta_time)
+                    if (key[KEY_UP] && player_y - PLAYER_RADIUS > 0) player_y -= 4;
+                    if (key[KEY_DOWN] && player_y + PLAYER_RADIUS < SCREEN_HEIGHT) player_y += 4;
+                    if (key[KEY_LEFT] && player_x - PLAYER_RADIUS > SCREEN_WIDTH / 4) player_x -= 4;
+                    if (key[KEY_RIGHT] && player_x + PLAYER_RADIUS < (SCREEN_WIDTH * 3) / 4) player_x += 4;
+                    
+                    if (key[KEY_SPACE] && bullet_cooldown <= 0) shoot_bullet(player_x, player_y + 5, 0);
+                    if (key[KEY_ESC]) { campaign_running = false; level_running = false; }
+
+                    // Cheats
+                    if (current_node->type == NODE_BOSS && boss_spawned) {
+                         if (key[KEY_F1]) enemies[0].health = enemies[0].max_health;
+                         if (key[KEY_F2]) enemies[0].health = (int)(enemies[0].max_health * 0.55);
+                         if (key[KEY_F3]) enemies[0].health = (int)(enemies[0].max_health * 0.25);
+                         if (key[KEY_K]) enemies[0].health = 0;
+                    }
+                    if (key[KEY_I]) player_health = 999;
+
+                    if (current_node->type != NODE_STORE) spawn_enemy(current_node->type);
+
+                    update_bullets(); 
+                    update_enemies(); 
+                    update_particles();
+                    
+                    check_bullet_enemy_collisions(); 
+                    check_player_bullet_collision(); 
+                    check_player_enemy_collision();
+
+                    if (player_invincible) { 
+                        player_hit_timer--; // Decremento fixo
+                        if (player_hit_timer <= 0) player_invincible = false; 
+                    }
+                    
+                    // Consome 1 tick
+                    ticks--;
+                } // Fim do while(ticks)
+
+                if (!level_running && !game_over) break; // Sai se venceu
                 
-                if (game_over || player_health <= 0) {
+                if (game_over) {
                     textout_centre_ex(screen, font, "YOU DIED", SCREEN_WIDTH/2, SCREEN_HEIGHT/2, makecol(255,0,0), -1);
                     rest(2000);
-                    campaign_running = false; level_running = false; continue;
-                }
-                
-                if (current_node->type == NODE_BOSS) {
-                    if (enemy_counter >= level_kill_target && !boss_warning_shown) {
-                         textout_centre_ex(screen, font, "WARNING: BOSS APPROACHING", SCREEN_WIDTH/2, SCREEN_HEIGHT/2, makecol(255,0,0), -1);
-                         blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-                         rest(1000); boss_warning_shown = true;
-                    }
-                    check_boss_death();
-                    if (boss_defeated) level_running = false;
-                } else if (current_node->type != NODE_STORE) {
-                    if (enemy_counter >= level_kill_target) level_running = false;
-                } else {
-                    repair_station_timer--;
-                    if(repair_station_timer <= 0) level_running = false;
+                    campaign_running = false; 
+                    break;
                 }
 
+                // =========================================================
+                // 2. RENDERIZAÇÃO (FPS Livre)
+                // =========================================================
                 if (current_node->type == NODE_STORE) {
                     stretch_blit(loja_bg, buffer, 0, 0, loja_bg->w, loja_bg->h, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
                 } else if (current_node->type == NODE_BOSS && boss_spawned) {
@@ -372,63 +410,20 @@ int main(void) {
                     masked_blit(fundo, buffer, 0, 0, 80, 0, fundo->w, fundo->h);
                 }
 
-                if (key[KEY_UP] && player_y - PLAYER_RADIUS > 0) player_y -= (int)(4 * 60 * delta_time);
-                if (key[KEY_DOWN] && player_y + PLAYER_RADIUS < SCREEN_HEIGHT) player_y += (int)(4 * 60 * delta_time);
-                if (key[KEY_LEFT] && player_x - PLAYER_RADIUS > SCREEN_WIDTH / 4) player_x -= (int)(4 * 60 * delta_time);
-                if (key[KEY_RIGHT] && player_x + PLAYER_RADIUS < (SCREEN_WIDTH * 3) / 4) player_x += (int)(4 * 60 * delta_time);
-                if (key[KEY_SPACE] && bullet_cooldown <= 0) shoot_bullet(player_x, player_y + 5, 0);
-                if (key[KEY_ESC]) { campaign_running = false; level_running = false; }
-
-                // --- CHEATS DE DESENVOLVEDOR ---
-                //if (current_node->type == NODE_BOSS && boss_spawned) {
-                    
-                // F1: Reseta para Fase 1 (100% Vida)
-                if (key[KEY_F1]) { 
-                    enemies[0].health = enemies[0].max_health; 
-                    rest(100); // Pausa para não registrar múltiplo clique
-                }
-                
-                // F2: Pula para Fase 2 (55% Vida)
-                if (key[KEY_F2]) { 
-                    enemies[0].health = (int)(enemies[0].max_health * 0.55); 
-                    rest(100);
-                }
-
-                // F3: Pula para Fase 3 (25% Vida)
-                if (key[KEY_F3]) { 
-                    enemies[0].health = (int)(enemies[0].max_health * 0.25); 
-                    rest(100);
-                }
-
-                // K: Mata o Boss (Kill)
-                if (key[KEY_K]) { 
-                    enemies[0].health = 0; 
-                }
-                //}
-                
-                // I: Imortalidade (Toggle)
-                if (key[KEY_I]) {
-                    player_health = 999;
-                }
-                
-                if (current_node->type != NODE_STORE) spawn_enemy(current_node->type);
-                
-                update_bullets(); update_enemies();
-                check_bullet_enemy_collisions(); check_player_bullet_collision(); check_player_enemy_collision();
-
-                if (player_invincible) { 
-                    player_hit_timer -= (int)(delta_time * 60.0); 
-                    if (player_hit_timer <= 0) player_invincible = false; 
-                }
-                if (!player_invincible || (player_hit_timer % 4) < 2) masked_blit(player, buffer, 0, 0, player_x - player->w/2, player_y - player->h/2, player->w, player->h);
+                if (!player_invincible || (player_hit_timer % 4) < 2) 
+                    masked_blit(player, buffer, 0, 0, player_x - player->w/2, player_y - player->h/2, player->w, player->h);
 
                 draw_bullets(buffer, playerBullet1, playerBullet1, playerBullet2, playerBullet3);
                 draw_enemies(buffer, enemy_bmp, boss_bmp);
+                draw_particles(buffer);
 
                 rectfill(buffer, 0, 0, SCREEN_WIDTH / 4, SCREEN_HEIGHT, makecol(59, 68, 75));
                 rectfill(buffer, (SCREEN_WIDTH * 3) / 4, 0, SCREEN_WIDTH, SCREEN_HEIGHT, makecol(59, 68, 75));
                 
-                if(current_node->type == NODE_BOSS && enemy_counter >= level_kill_target) {
+                if(boss_warning_shown && current_node->type == NODE_BOSS && !boss_spawned) {
+                     textout_centre_ex(buffer, font, "WARNING: BOSS APPROACHING", SCREEN_WIDTH/2, SCREEN_HEIGHT/2, makecol(255,0,0), -1);
+                }
+                else if(current_node->type == NODE_BOSS && enemy_counter >= level_kill_target) {
                      textout_centre_ex(buffer, font, "DEFEAT BOSS", 160, 10, makecol(255,0,0), -1);
                 } else if (current_node->type != NODE_STORE) {
                     show_enemy_counter(buffer); 
@@ -447,7 +442,11 @@ int main(void) {
                     textout_centre_ex(buffer, font, "SYSTEMS READY", 160, SCREEN_HEIGHT/2 - 20, makecol(255,255,255), -1);
                 }
 
-                blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); rest(16);
+                blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT); 
+                
+                // Mágica para não fritar a CPU: dá um descanso mínimo
+                // O controle de velocidade real é feito pelo while(ticks) acima
+                rest(0); 
             }
 
             if (!game_over && campaign_running && current_node->type != NODE_STORE) {
@@ -460,7 +459,6 @@ int main(void) {
                 textout_centre_ex(buffer, font, "PRESS ENTER TO DEPART", SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 5, makecol(180,180,180), -1);
                 blit(buffer, screen, 0, 0, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
                 rest(500); 
-                
                 while(key[KEY_ENTER]) { rest(10); } 
                 while(!key[KEY_ENTER]) { rest(10); }
                 while(key[KEY_ENTER]) { rest(10); }
