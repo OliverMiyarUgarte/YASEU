@@ -5,8 +5,7 @@
 #include <math.h>    // Necessário para atan2, cos, sin
 #include "tree.h"    // Necessário para reconhecer NODE_BOSS
 
-// Extern declarations for delta time and other globals
-extern double delta_time;
+
 extern int global_enemy_hp;
 extern int global_spawn_rate;
 extern int ENEMY_RADIUS;
@@ -115,98 +114,109 @@ void update_enemies() {
                
                // FASE 3: PERSEGUIÇÃO + CAOS (HP < 30%)
                if (hp_percent < 0.3) {
-               
-                   // 1. Limpeza de Estados da Fase 2 (Segurança)
-                   if (enemies[i].laser_active >= 1 && enemies[i].laser_active <= 3) {
+                   
+                   // 1. Limpeza de Estados
+                   if (enemies[i].laser_active >= 1 && enemies[i].laser_active <= 6) {
                        enemies[i].laser_width = 0; 
                        enemies[i].laser_active = 0;
                        enemies[i].attack_alternator = 0; 
                    }
-               
-                   // 2. Movimentação de Perseguição (Chasing)
-                   // Só persegue se não estiver disparando o laser fatal (estado 11)
-                   if (enemies[i].laser_active != 11) {
+                
+                   // 2. MOVIMENTAÇÃO INTELIGENTE
+                   // Lógica:
+                   // - Se estiver na Espiral (alternator == 0): NÃO SE MEXE.
+                   // - Se estiver atirando Laser (active == 11): NÃO SE MEXE.
+                   // - Só se mexe quando estiver PREPARANDO o laser (mirando em você).
+                
+                   if (enemies[i].attack_alternator != 0 && enemies[i].laser_active != 11)
+                   {
                        int target_x = player_x;
-                       int target_y = player_y - 80; // Tenta ficar acima do player
-                       
-                       if (enemies[i].x < target_x) enemies[i].x += 2; else enemies[i].x -= 2;
-                       
-                       if (enemies[i].y < target_y && enemies[i].y < SCREEN_HEIGHT - 100) enemies[i].y += 1;
-                       else if (enemies[i].y > target_y) enemies[i].y -= 1;
+                       int target_y = player_y - 80;
+                
+                       if (enemies[i].x < target_x)
+                           enemies[i].x += 2;
+                       else
+                           enemies[i].x -= 2;
+                       if (enemies[i].y < target_y && enemies[i].y < SCREEN_HEIGHT - 100)
+                           enemies[i].y += 1;
+                       else if (enemies[i].y > target_y)
+                           enemies[i].y -= 1;
                    }
-               
+                
                    // 3. Máquina de Estados de Ataque
-                   
+                
                    // ESTADO: PREPARANDO LASER (Aviso visual)
-                   if (enemies[i].laser_active == 10) { 
+                   if (enemies[i].laser_active == 10)
+                   {
                        enemies[i].laser_timer--;
-                       if (enemies[i].laser_timer <= 0) { 
-                           enemies[i].laser_active = 11; 
-                           enemies[i].laser_timer = 60; // Duração do laser ativo
-                           enemies[i].laser_width = 2; 
+                       if (enemies[i].laser_timer <= 0)
+                       {
+                           enemies[i].laser_active = 11;
+                           enemies[i].laser_timer = 60;
+                           enemies[i].laser_width = 2;
                        }
                    }
-                   // ESTADO: DISPARANDO LASER (Dano real em cruz)
-                   else if (enemies[i].laser_active == 11) { 
-                       if (enemies[i].laser_width < 25) enemies[i].laser_width += 3; // Expande o laser
+                   // ESTADO: DISPARANDO LASER
+                   else if (enemies[i].laser_active == 11)
+                   {
+                       if (enemies[i].laser_width < 25)
+                           enemies[i].laser_width += 3;
                        enemies[i].laser_timer--;
-                       
-                       if (enemies[i].laser_timer <= 0) { 
-                           enemies[i].laser_active = 0; 
-                           enemies[i].shoot_cooldown = 40; // Descanso após laser
-                           enemies[i].attack_alternator = 0; // Volta para a Espiral
+                
+                       if (enemies[i].laser_timer <= 0)
+                       {
+                           enemies[i].laser_active = 0;
+                           enemies[i].shoot_cooldown = 40;
+                           enemies[i].attack_alternator = 0; // Volta para Espiral
                        }
                    }
                    // ESTADO: COOLDOWN OU ESPIRAL
-                   else {
-                       if (enemies[i].shoot_cooldown > 0) enemies[i].shoot_cooldown--;
-                       else {
-                           // --- ATAQUE 1: ESPIRAL DA MORTE ---
-                           if (enemies[i].attack_alternator == 0) {
-                               
-                               // Variáveis estáticas para manter o estado entre frames
+                   else
+                   {
+                       if (enemies[i].shoot_cooldown > 0)
+                           enemies[i].shoot_cooldown--;
+                       else
+                       {
+                           // --- ATAQUE 1: ESPIRAL DA MORTE (PARADO) ---
+                           if (enemies[i].attack_alternator == 0)
+                           {
+                
                                static float spiral_angle = 0;
                                static int spiral_shots = 0;
-               
-                               // Dispara 3 balas em pontas de triângulo (120 graus cada)
-                               for (int k = 0; k < 3; k++) {
-                                   // 2.0944 radianos = 120 graus
-                                   float angle = spiral_angle + (k * 2.0944); 
-                                   
-                                   int vx = (int)(cos(angle) * 5); // Velocidade 5
+                
+                               // Dispara 3 balas
+                               for (int k = 0; k < 3; k++)
+                               {
+                                   float angle = spiral_angle + (k * 2.0944);
+                                   int vx = (int)(cos(angle) * 5);
                                    int vy = (int)(sin(angle) * 5);
-                                   
                                    shoot_custom_bullet(enemies[i].x, enemies[i].y + 20, vx, vy);
                                }
-               
-                               // Gira o ângulo para o próximo frame
-                               spiral_angle += 0.2; 
-                               
-                               // Incrementa contador
+                
+                               spiral_angle += 0.2;
                                spiral_shots++;
-               
-                               // Cooldown curtíssimo para criar o efeito de "cobra" contínua
                                enemies[i].shoot_cooldown = 5;
-               
-                               // Se já atirou muito (aprox 3 segundos), troca para o Laser
-                               if (spiral_shots > 40) {
-                                   enemies[i].attack_alternator = 1; // Vai pro Laser
-                                   enemies[i].shoot_cooldown = 60;   // Pausa dramática antes do laser
-                                   enemies[i].laser_active = 10;     // Já inicia o aviso do laser
-                                   enemies[i].laser_timer = 45;      
-                                   spiral_shots = 0;                 // Reseta contador
+                
+                               // Quando termina a espiral, vai pro Laser
+                               if (spiral_shots > 40)
+                               {
+                                   enemies[i].attack_alternator = 1; // AGORA ELE VAI COMEÇAR A SE MEXER PARA MIRAR
+                                   enemies[i].shoot_cooldown = 60;
+                                   enemies[i].laser_active = 10;
+                                   enemies[i].laser_timer = 45;
+                                   spiral_shots = 0;
                                }
-                           } 
-                           // --- ATAQUE 2: Iniciar Laser (Fallthrough) ---
-                           else {
-                               // Caso caia aqui por segurança, joga pro laser
-                               enemies[i].laser_active = 10; 
-                               enemies[i].laser_timer = 45; 
+                           }
+                           // --- ATAQUE 2: Laser (Fallthrough) ---
+                           else
+                           {
+                               enemies[i].laser_active = 10;
+                               enemies[i].laser_timer = 45;
                            }
                        }
                    }
                }
-               // FASE 2: VARREDURA(HP < 60%)
+            // FASE 2: VARREDURA(HP < 60%)
                else if (hp_percent < 0.6){
                    // ESTADO 0: DECISÃO
                    if (enemies[i].laser_active == 0) {
